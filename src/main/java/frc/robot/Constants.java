@@ -27,23 +27,23 @@ public final class Constants {
 
   public static final class CanId {
     // Intake
-    public static final int kIntakePivotKraken = 17; // you provided
+    public static final int kIntakePivotKraken = 17;
     public static final int kIntakeRollerKraken = 19;
 
     // Transport (main conveyor inside robot, not shooter feeder)
-    public static final int kMainTransportKraken = 16; // you provided
+    public static final int kMainTransportKraken = 16;
     public static final int kShooterFeederKraken = 20;
 
     // Shooter wheels
-    public static final int kShooterTopKraken = 40;    // set real value
-    public static final int kShooterMidKraken = 41;    // set real value
-    public static final int kShooterBottomKraken = 42; // set real value
+    public static final int kShooterTopKraken = 21;
+    public static final int kShooterMidKraken = 22;
+    public static final int kShooterBottomKraken = 23;
 
     // Climber
-    public static final int kClimberKraken = 50; // set real value
+    public static final int kClimberKraken = 50;
 
     // Hood (NEO Vortex on Spark Flex)
-    public static final int kHoodNeoVortex = 60; // set real value
+    public static final int kHoodNeoVortex = 60;
 
     private CanId() {}
   }
@@ -56,8 +56,8 @@ public final class Constants {
     public static final boolean kShooterFeederInverted = false;
 
     public static final boolean kShooterTopInverted = false;
-    public static final boolean kShooterMidInverted = false;
-    public static final boolean kShooterBottomInverted = false;
+    public static final boolean kShooterMidInverted = true;
+    public static final boolean kShooterBottomInverted = true;
 
     public static final boolean kClimberInverted = false;
 
@@ -66,20 +66,32 @@ public final class Constants {
     private MotorInverts() {}
   }
 
-
   public static final class IntakeConstants {
-    public static final int kThroughBoreDutyCycleDio = 0; // set real DIO
+    public static final int kThroughBoreDutyCycleDio = 0;
 
     // Pivot rotations per small sprocket rotation
-    public static final double kSmallToPivotRatio = 1.0; // set from sprockets
+    public static final double kSmallToPivotRatio = 1.0;
 
-    public static final double kClosedPivotRot = 0.54; // measure
-    public static final double kOpenPivotRot = 0.06;  // measure
+    /**
+     * Absolute encoder zero offset in rotations [0,1).
+     * Tune this once so the reported intake pivot position matches your real mechanism position
+     * after reboot, instead of shifting every power cycle.
+     */
+    public static final double kPivotEncoderZeroOffsetRot = 0.0;
 
-    public static final double kPivotP = 1.0; // tune
+    /**
+     * Intake target positions in encoder-rotation space after zero offset is applied.
+     * These stay valid across reboots because they are referenced to kPivotEncoderZeroOffsetRot.
+     */
+    public static final double kClosedPivotRot = 0.54;
+    public static final double kOpenPivotRot = 0.06;
+
+    public static final double kPivotP = 1.2;
     public static final double kPivotI = 0.0;
-    public static final double kPivotD = 0.02;
-    public static final double kPivotMaxOut = 0.15;
+    public static final double kPivotD = 0.03;
+
+    public static final double kPivotMaxOut = 0.35;
+    public static final double kPivotToleranceRot = 0.02;
 
     public static final double kRollerPercent = 0.80;
 
@@ -98,12 +110,17 @@ public final class Constants {
     public static final double kMidRpm = 4500.0;
     public static final double kBottomRpm = 4500.0;
 
-    public static final double kVelocityP = 0.12;
+    public static final double kVelocityP = 0.18;
     public static final double kVelocityI = 0.0;
     public static final double kVelocityD = 0.0;
+    public static final double kVelocityV = 12.0 / 100.0;
+    public static final double kVelocityS = 0.0;
 
     public static final double kReadyRpmTolerance = 100.0;
     public static final double kReadyTimeSeconds = 0.20;
+
+    public static final double kToggleTestLowRpm = 2600.0;
+    public static final double kToggleTestHighRpm = 3900.0;
 
     private ShooterConstants() {}
   }
@@ -118,38 +135,27 @@ public final class Constants {
    * - Your hood will likely use only part of that range.
    */
   public static final class HoodConstants {
-    // ⚙️ Spark Flex CAN ID for the hood motor
     public static final int kHoodMotorCanId = CanId.kHoodNeoVortex;
-
-    // ⚙️ Through Bore duty-cycle encoder DIO channel
     public static final int kThroughBoreDio = 1;
 
     /**
-     * ⚙️ If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
-     * - Direct on hood shaft: 1.0
-     * - Example: encoder turns 3 times while hood turns 1 time => hood/encoder = 1/3 => 0.3333
+     * If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
      */
     public static final double kEncoderToHoodRatio = 1.0;
 
     /**
-     * ⚙️ Encoder zero offset in ENCODER rotations (not hood rotations).
-     * Measure encoder reading at your desired hood-zero, set this so hood position becomes ~0 at that point.
+     * Encoder zero offset in ENCODER rotations, not hood rotations.
      */
     public static final double kEncoderOffsetRot = 0.0;
 
-    // ⚙️ Hood soft limits in HOOD rotations (after ratio+offset)
     public static final double kMinHoodRot = 0.00;
-    public static final double kMaxHoodRot = 0.35;
+    public static final double kMaxHoodRot = 0.60;
 
-    // 🛞 Hood PID (software PID driving motor percent)
     public static final double kP = 6.0;
     public static final double kI = 0.0;
     public static final double kD = 0.2;
 
-    // ⚙️ Clamp motor output for safety
     public static final double kMaxOut = 0.5;
-
-    // ⚙️ Consider hood at target within this tolerance (hood rotations)
     public static final double kToleranceHoodRot = 0.005;
 
     private HoodConstants() {}
@@ -173,22 +179,31 @@ public final class Constants {
   }
 
   /**
-   * Shot lookup tables:
-   * distance (meters) -> hood position (encoder rotations 0..1) + shooter RPMs.
-   * You will fill these after collecting data.
+   * Unified distance-to-shot table.
+   * Distances are stored in meters.
+   * Hood values are stored in hood rotations.
+   * Shooter values are stored in wheel RPM.
+   *
+   * Reference calibration points adapted from the WCP 2026 Competitive Concept architecture:
+   * 52.0 in, hood 0.56, 2800 RPM
+   * 114.4 in, hood 0.42, 3275 RPM
+   * 165.5 in, hood 0.37, 3650 RPM
    */
   public static final class ShotLookup {
-    public static final double[] kDistanceM = {1.5, 3.0, 4.5, 6.0};
+    public static final double[] kDistanceM = {
+        Units.inchesToMeters(52.0),
+        Units.inchesToMeters(114.4),
+        Units.inchesToMeters(165.5)
+    };
 
-    // ⚙️ Hood targets in HOOD rotations
-    public static final double[] kHoodRot = {0.10, 0.16, 0.22, 0.28};
+    public static final double[] kHoodRot = {0.56, 0.42, 0.37};
 
-    public static final double[] kTopRpm = {4200.0, 4500.0, 4800.0, 5200.0};
-    public static final double[] kMidRpm = {4200.0, 4500.0, 4800.0, 5200.0};
-    public static final double[] kBottomRpm = {4200.0, 4500.0, 4800.0, 5200.0};
+    public static final double[] kTopRpm = {2800.0, 3275.0, 3650.0};
+    public static final double[] kMidRpm = {2800.0, 3275.0, 3650.0};
+    public static final double[] kBottomRpm = {2800.0, 3275.0, 3650.0};
 
-  private ShotLookup() {}
-}
+    private ShotLookup() {}
+  }
 
   public static final class VisionConstants {
     public static final double kMaxPoseJumpMeters = 1.25;
@@ -198,12 +213,12 @@ public final class Constants {
   }
 
   public static final class PathPlannerConstants {
-    public static final double kDriveBaseRadiusMeters = 0.45; // set from CAD
+    public static final double kDriveBaseRadiusMeters = 0.45;
     private PathPlannerConstants() {}
   }
 
   public static final class AutoAimConstants {
-    public static final double kUnderHubHeadingDeg = 0.0; // measure
+    public static final double kUnderHubHeadingDeg = 0.0;
     private AutoAimConstants() {}
   }
 

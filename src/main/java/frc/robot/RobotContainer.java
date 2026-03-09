@@ -7,21 +7,13 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import java.util.function.DoubleSupplier;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.AutoNamedCommands;
 import frc.robot.commands.Autos;
-// import frc.robot.commands.ClimbDown;
-// import frc.robot.commands.ClimbUp;
 import frc.robot.commands.DriveFaceVirtualGoal;
-// import frc.robot.commands.FeedShooterWithIntakeJerk;
-// import frc.robot.commands.PrepareToShootAtHub;
 import frc.robot.commands.ResetGyro;
-// import frc.robot.commands.RunConveyorOnlyWhileHeld;
-// import frc.robot.commands.RunFeederOnlyWhileHeld;
 import frc.robot.commands.RunTransportWhileHeld;
-// import frc.robot.commands.ShooterReadyIndicator;
-// import frc.robot.commands.StopShooter;
-// import frc.robot.commands.StopTransport;
 import frc.robot.commands.ToggleIntake;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriverDisplaySubsystem;
@@ -80,42 +72,35 @@ public class RobotContainer {
     configureBindings();
   }
 
+  private Command createShooterToggleCommand(DoubleSupplier rpmSupplier) {
+    return Commands.startEnd(
+        () -> shooter.setAllTargetRpm(rpmSupplier.getAsDouble()),
+        shooter::stop,
+        shooter);
+  }
+
   private void configureBindings() {
     Trigger menuAndView = driver.start().and(driver.back());
     menuAndView.onTrue(new ResetGyro(drivebase));
 
-    // Transport toggle (X): one press starts both conveyors + shooter feeder together, next press stops
-    // Live-tune speed via Transport/TransportPercent on the dashboard
     driver.x().toggleOnTrue(
         RunTransportWhileHeld.create(transport, transport::getTransportPercent)
     );
 
     driver.rightBumper().onTrue(new ToggleIntake(intake));
-
-    // TESTING: Toggle intake pivot hold. When OFF, the intake pivot will not fight you.
     driver.leftBumper().onTrue(Commands.runOnce(intake::togglePivotHoldEnabled));
 
-    // driver.y().whileTrue(
-    //     PrepareToShootAtHub.create(
-    //         drivebase,
-    //         shooter,
-    //         hood,
-    //         () -> -driver.getLeftY(),
-    //         () -> -driver.getLeftX()
-    //     )
-    // );
-    // driver.y().whileTrue(new ShooterReadyIndicator(shooter, driver.getHID()));
+    // Shooter wheel test toggles — RPMs tunable live via SmartDashboard/Elastic
+    driver.y().toggleOnTrue(createShooterToggleCommand(shooter::getLiveLowRpm));
+    //driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
 
-    // driver.b().whileTrue(new FeedShooterWithIntakeJerk(transport, intake));
+    // A: run transport in reverse while held
+    driver.a().whileTrue(
+        Commands.runEnd(
+            () -> transport.runAll(-transport.getTransportPercent()),
+            transport::stopAll,
+            transport));
 
-    // driver.a().onTrue(new StopShooter(shooter));
-
-    // driver.povUp().whileTrue(new ClimbUp(climber));
-    // driver.povDown().whileTrue(new ClimbDown(climber));
-
-    // driver.back().onTrue(new StopTransport(transport));
-    // driver.povLeft().whileTrue(RunFeederOnlyWhileHeld.create(transport, Constants.TransportConstants.kFeederOnlyPercent));
-    // driver.povRight().whileTrue(RunConveyorOnlyWhileHeld.create(transport, Constants.TransportConstants.kConveyorOnlyPercent));
 
     driver.leftStick().toggleOnTrue(
         new frc.robot.commands.DriveFaceHub(

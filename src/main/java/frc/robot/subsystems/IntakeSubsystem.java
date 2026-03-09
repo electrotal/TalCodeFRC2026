@@ -28,7 +28,7 @@ public class IntakeSubsystem extends SubsystemBase {
           Constants.IntakeConstants.kPivotI,
           Constants.IntakeConstants.kPivotD);
 
-  // Tunable open, closed, target, all in rotations of the measured shaft (small sprocket space)
+  // All position units are encoder rotations after zero offset is applied.
   private double openRot = Constants.IntakeConstants.kOpenPivotRot;
   private double closedRot = Constants.IntakeConstants.kClosedPivotRot;
   private double targetRot = closedRot;
@@ -36,12 +36,10 @@ public class IntakeSubsystem extends SubsystemBase {
   private boolean open = false;
 
   private double rollerPercent = Constants.IntakeConstants.kRollerPercent;
-
-  // Optional test switch, keep if you already used it
   private boolean pivotHoldEnabled = true;
 
   private double maxOut = Constants.IntakeConstants.kPivotMaxOut;
-  private double toleranceRot = 0.02;
+  private double toleranceRot = Constants.IntakeConstants.kPivotToleranceRot;
 
   private final DutyCycleOut pivotOut = new DutyCycleOut(0.0);
   private final DutyCycleOut rollerOut = new DutyCycleOut(0.0);
@@ -49,19 +47,12 @@ public class IntakeSubsystem extends SubsystemBase {
   private double lastPivotPercent = 0.0;
   private double lastRollerPercent = 0.0;
 
-  // One turn offset, stored as absolute [0,1)
-  private double zeroAbs01 = 0.0;
-
   public IntakeSubsystem() {
     configureMotor(pivotMotor, NeutralModeValue.Brake, Constants.MotorInverts.kIntakePivotInverted);
     configureMotor(rollerMotor, NeutralModeValue.Coast, Constants.MotorInverts.kIntakeRollerInverted);
 
     pivotPid.setTolerance(toleranceRot);
 
-    // Capture a startup zero so values do not "jump" across reboot
-    zeroAbs01 = getAbs01();
-
-    // Seed dashboard keys
     SmartDashboard.putNumber("Intake/P", pivotPid.getP());
     SmartDashboard.putNumber("Intake/I", pivotPid.getI());
     SmartDashboard.putNumber("Intake/D", pivotPid.getD());
@@ -69,15 +60,11 @@ public class IntakeSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Intake/OpenRot", openRot);
     SmartDashboard.putNumber("Intake/ClosedRot", closedRot);
     SmartDashboard.putNumber("Intake/TargetRot", targetRot);
-
     SmartDashboard.putNumber("Intake/RollerPercent", rollerPercent);
-
     SmartDashboard.putNumber("Intake/MaxOut", maxOut);
     SmartDashboard.putNumber("Intake/ToleranceRot", toleranceRot);
-
     SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
-
-    SmartDashboard.putNumber("Intake/ZeroAbs01", zeroAbs01);
+    SmartDashboard.putNumber("Intake/ZeroOffsetRot", Constants.IntakeConstants.kPivotEncoderZeroOffsetRot);
   }
 
   private static void configureMotor(TalonFX motor, NeutralModeValue neutralMode, boolean invert) {
@@ -94,32 +81,22 @@ public class IntakeSubsystem extends SubsystemBase {
     motor.getConfigurator().apply(cl);
   }
 
-  // Wrap to [0,1)
   private static double wrap01(double x) {
     double r = x % 1.0;
     if (r < 0) r += 1.0;
     return r;
   }
 
-  // Wrap to [-0.5, 0.5)
   private static double wrapHalf(double x) {
     return wrap01(x + 0.5) - 0.5;
   }
 
-  // Raw abs from encoder in [0,1)
   public double getAbs01() {
     return wrap01(throughBore.getAbsRot());
   }
 
-  // Relative within one turn, always [0,1)
   public double getRel01() {
-    return wrap01(getAbs01() - zeroAbs01);
-  }
-
-  // If you ever want to re-zero while running
-  public void zeroNow() {
-    zeroAbs01 = getAbs01();
-    SmartDashboard.putNumber("Intake/ZeroAbs01", zeroAbs01);
+    return wrap01(getAbs01() - Constants.IntakeConstants.kPivotEncoderZeroOffsetRot);
   }
 
   public boolean isOpen() {
@@ -143,9 +120,8 @@ public class IntakeSubsystem extends SubsystemBase {
     setPivotHoldEnabled(!pivotHoldEnabled);
   }
 
-  // Compatibility for existing commands
   public void setPivotTargetRot(double rot) {
-    targetRot = rot;
+    targetRot = wrap01(rot);
     SmartDashboard.putNumber("Intake/TargetRot", targetRot);
   }
 
@@ -153,25 +129,20 @@ public class IntakeSubsystem extends SubsystemBase {
     return targetRot;
   }
 
-  // Continuous for debugging only, will jump across reboot and that is fine
   public double getThroughBoreContinuousRot() {
     return throughBore.getContinuousRot();
   }
 
-  // What we actually control and display — raw absolute encoder value, no startup-zero dependency
   public double getMeasuredRot() {
-    return getAbs01();
+    return getRel01();
   }
 
-  // Backwards compatible name used by driver display earlier
   public double getPivotRot() {
     return getMeasuredRot();
   }
 
   public double getPivotErrorRot() {
-    // We want shortest path error within one turn
-    double err = wrapHalf(targetRot - getMeasuredRot());
-    return err;
+    return wrapHalf(targetRot - getMeasuredRot());
   }
 
   public double getLastPivotPercent() {
@@ -207,7 +178,11 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   public void toggle() {
-    if (open) close(); else open();
+    if (open) {
+      close();
+    } else {
+      open();
+    }
   }
 
   public void setRollerPercent(double percent) {
@@ -226,13 +201,11 @@ public class IntakeSubsystem extends SubsystemBase {
     double d = SmartDashboard.getNumber("Intake/D", pivotPid.getD());
     pivotPid.setPID(p, i, d);
 
-    openRot = SmartDashboard.getNumber("Intake/OpenRot", openRot);
-    closedRot = SmartDashboard.getNumber("Intake/ClosedRot", closedRot);
-
-    targetRot = SmartDashboard.getNumber("Intake/TargetRot", targetRot);
+    openRot = wrap01(SmartDashboard.getNumber("Intake/OpenRot", openRot));
+    closedRot = wrap01(SmartDashboard.getNumber("Intake/ClosedRot", closedRot));
+    targetRot = wrap01(SmartDashboard.getNumber("Intake/TargetRot", targetRot));
 
     rollerPercent = SmartDashboard.getNumber("Intake/RollerPercent", rollerPercent);
-
     maxOut = SmartDashboard.getNumber("Intake/MaxOut", maxOut);
     toleranceRot = SmartDashboard.getNumber("Intake/ToleranceRot", toleranceRot);
     pivotPid.setTolerance(toleranceRot);
@@ -244,25 +217,17 @@ public class IntakeSubsystem extends SubsystemBase {
   public void periodic() {
     updateTunablesFromNT();
 
-    // Publish keys for Elastic
     SmartDashboard.putString("Intake/State", open ? "Open" : "Closed");
-
     SmartDashboard.putNumber("Intake/Abs01", getAbs01());
     SmartDashboard.putNumber("Intake/Rel01", getRel01());
-    SmartDashboard.putNumber("Intake/ZeroAbs01", zeroAbs01);
-
     SmartDashboard.putNumber("Intake/MeasRot", getMeasuredRot());
     SmartDashboard.putNumber("Intake/ErrRot", getPivotErrorRot());
-
     SmartDashboard.putNumber("Intake/ThroughBoreContRot", getThroughBoreContinuousRot());
-
     SmartDashboard.putNumber("Intake/PivotCmdPct", lastPivotPercent);
     SmartDashboard.putNumber("Intake/RollerCmdPct", lastRollerPercent);
-
     SmartDashboard.putNumber("Intake/PivotMotorRotorPosRot", getPivotMotorRotorPosRot());
     SmartDashboard.putNumber("Intake/PivotMotorRotorVelRps", getPivotMotorRotorVelRps());
     SmartDashboard.putNumber("Intake/RollerMotorRotorVelRps", getRollerMotorRotorVelRps());
-
     SmartDashboard.putBoolean("Intake/Open", open);
     SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
 
@@ -272,8 +237,8 @@ public class IntakeSubsystem extends SubsystemBase {
       return;
     }
 
-    double err = getPivotErrorRot();
-    double out = pivotPid.calculate(0.0, err);
+    double out = pivotPid.calculate(getMeasuredRot(), targetRot);
+
     out = AngleMath.clamp(out, -maxOut, maxOut);
     lastPivotPercent = out;
     pivotMotor.setControl(pivotOut.withOutput(out));

@@ -22,23 +22,32 @@ public class ShooterSubsystem extends SubsystemBase {
   private final TalonFX mid = new TalonFX(Constants.CanId.kShooterMidKraken);
   private final TalonFX bottom = new TalonFX(Constants.CanId.kShooterBottomKraken);
 
-  private final VelocityVoltage velReq = new VelocityVoltage(0.0);
+  private final VelocityVoltage topVelReq = new VelocityVoltage(0.0).withSlot(0);
+  private final VelocityVoltage midVelReq = new VelocityVoltage(0.0).withSlot(0);
+  private final VelocityVoltage bottomVelReq = new VelocityVoltage(0.0).withSlot(0);
   private final DutyCycleOut pctReq = new DutyCycleOut(0.0);
 
   private double targetTopRpm = 0.0;
   private double targetMidRpm = 0.0;
   private double targetBottomRpm = 0.0;
 
+  private boolean velocityControlEnabled = false;
   private double atSpeedSinceSec = -1.0;
+
+  // Live-tunable toggle RPMs (editable from SmartDashboard / Elastic)
+  private double liveLowRpm  = Constants.ShooterConstants.kToggleTestLowRpm;
+  private double liveHighRpm = Constants.ShooterConstants.kToggleTestHighRpm;
 
   public ShooterSubsystem() {
     configureMotor(top, Constants.MotorInverts.kShooterTopInverted);
     configureMotor(mid, Constants.MotorInverts.kShooterMidInverted);
     configureMotor(bottom, Constants.MotorInverts.kShooterBottomInverted);
+
+    SmartDashboard.putNumber("Shooter/ToggleLowRpm",  liveLowRpm);
+    SmartDashboard.putNumber("Shooter/ToggleHighRpm", liveHighRpm);
   }
 
   private void configureMotor(TalonFX motor, boolean invert) {
-    // Shooter wheels should coast.
     MotorOutputConfigs out = new MotorOutputConfigs();
     out.NeutralMode = NeutralModeValue.Coast;
     out.Inverted = invert ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
@@ -55,6 +64,8 @@ public class ShooterSubsystem extends SubsystemBase {
     slot0.kP = Constants.ShooterConstants.kVelocityP;
     slot0.kI = Constants.ShooterConstants.kVelocityI;
     slot0.kD = Constants.ShooterConstants.kVelocityD;
+    slot0.kV = Constants.ShooterConstants.kVelocityV;
+    slot0.kS = Constants.ShooterConstants.kVelocityS;
     motor.getConfigurator().apply(slot0);
   }
 
@@ -65,45 +76,77 @@ public class ShooterSubsystem extends SubsystemBase {
       case MID -> targetMidRpm = rpm;
       case BOTTOM -> targetBottomRpm = rpm;
     }
+    velocityControlEnabled = true;
+    applyVelocityTargets();
+  }
+
+  public void setTargetRpms(double topRpm, double midRpm, double bottomRpm) {
+    targetTopRpm = Math.max(0.0, topRpm);
+    targetMidRpm = Math.max(0.0, midRpm);
+    targetBottomRpm = Math.max(0.0, bottomRpm);
+    velocityControlEnabled = true;
     applyVelocityTargets();
   }
 
   public void setAllTargetRpm(double rpm) {
-    setTargetRpm(ShooterMotor.TOP, rpm);
-    setTargetRpm(ShooterMotor.MID, rpm);
-    setTargetRpm(ShooterMotor.BOTTOM, rpm);
+    setTargetRpms(rpm, rpm, rpm);
   }
 
   private void applyVelocityTargets() {
-    // Phoenix 6 velocity uses rps.
-    top.setControl(velReq.withVelocity(targetTopRpm / 60.0));
-    mid.setControl(velReq.withVelocity(targetMidRpm / 60.0));
-    bottom.setControl(velReq.withVelocity(targetBottomRpm / 60.0));
+    top.setControl(topVelReq.withVelocity(targetTopRpm / 60.0));
+    mid.setControl(midVelReq.withVelocity(targetMidRpm / 60.0));
+    bottom.setControl(bottomVelReq.withVelocity(targetBottomRpm / 60.0));
   }
 
   public void setAllPercent(double percent) {
+    velocityControlEnabled = false;
     percent = AngleMath.clamp(percent, -1.0, 1.0);
     top.setControl(pctReq.withOutput(percent));
     mid.setControl(pctReq.withOutput(percent));
     bottom.setControl(pctReq.withOutput(percent));
   }
 
-  public double getTopRpm() { return top.getVelocity().getValueAsDouble() * 60.0; }
-  public double getMidRpm() { return mid.getVelocity().getValueAsDouble() * 60.0; }
-  public double getBottomRpm() { return bottom.getVelocity().getValueAsDouble() * 60.0; }
+  public double getTopRpm() {
+    return top.getVelocity().getValueAsDouble() * 60.0;
+  }
+
+  public double getMidRpm() {
+    return mid.getVelocity().getValueAsDouble() * 60.0;
+  }
+
+  public double getBottomRpm() {
+    return bottom.getVelocity().getValueAsDouble() * 60.0;
+  }
+
+  public double getTargetTopRpm() {
+    return targetTopRpm;
+  }
+
+  public double getTargetMidRpm() {
+    return targetMidRpm;
+  }
+
+  public double getTargetBottomRpm() {
+    return targetBottomRpm;
+  }
+
+  public double getLiveLowRpm()  { return liveLowRpm; }
+  public double getLiveHighRpm() { return liveHighRpm; }
 
   public boolean isAtSpeed() {
     double tol = Constants.ShooterConstants.kReadyRpmTolerance;
     boolean topOk = Math.abs(getTopRpm() - targetTopRpm) <= tol;
     boolean midOk = Math.abs(getMidRpm() - targetMidRpm) <= tol;
     boolean botOk = Math.abs(getBottomRpm() - targetBottomRpm) <= tol;
-    return topOk && midOk && botOk;
+    return velocityControlEnabled && topOk && midOk && botOk;
   }
 
   public boolean isAtSpeedForTime(double seconds) {
     double now = Timer.getFPGATimestamp();
     if (isAtSpeed()) {
-      if (atSpeedSinceSec < 0.0) atSpeedSinceSec = now;
+      if (atSpeedSinceSec < 0.0) {
+        atSpeedSinceSec = now;
+      }
       return (now - atSpeedSinceSec) >= seconds;
     }
     atSpeedSinceSec = -1.0;
@@ -111,15 +154,30 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   public void stop() {
-    setAllTargetRpm(0.0);
+    targetTopRpm = 0.0;
+    targetMidRpm = 0.0;
+    targetBottomRpm = 0.0;
+    velocityControlEnabled = false;
+    atSpeedSinceSec = -1.0;
+    setAllPercent(0.0);
   }
 
   @Override
   public void periodic() {
+    liveLowRpm  = SmartDashboard.getNumber("Shooter/ToggleLowRpm",  liveLowRpm);
+    liveHighRpm = SmartDashboard.getNumber("Shooter/ToggleHighRpm", liveHighRpm);
+
+    if (velocityControlEnabled) {
+      applyVelocityTargets();
+    }
+
+    SmartDashboard.putBoolean("Shooter/VelocityModeEnabled", velocityControlEnabled);
     SmartDashboard.putBoolean("Shooter/Ready", isAtSpeed());
     SmartDashboard.putNumber("Shooter/TopRPM", getTopRpm());
     SmartDashboard.putNumber("Shooter/MidRPM", getMidRpm());
     SmartDashboard.putNumber("Shooter/BottomRPM", getBottomRpm());
-    SmartDashboard.putBoolean("Shooter/Ready", isAtSpeed());
+    SmartDashboard.putNumber("Shooter/TargetTopRPM", targetTopRpm);
+    SmartDashboard.putNumber("Shooter/TargetMidRPM", targetMidRpm);
+    SmartDashboard.putNumber("Shooter/TargetBottomRPM", targetBottomRpm);
   }
-}   
+}
