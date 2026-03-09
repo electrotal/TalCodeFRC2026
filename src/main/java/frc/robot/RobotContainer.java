@@ -92,7 +92,7 @@ public class RobotContainer {
 
     // Shooter wheel test toggles — RPMs tunable live via SmartDashboard/Elastic
     driver.y().toggleOnTrue(createShooterToggleCommand(shooter::getLiveLowRpm));
-    //driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
+    driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
 
     // A: run transport in reverse while held
     driver.a().whileTrue(

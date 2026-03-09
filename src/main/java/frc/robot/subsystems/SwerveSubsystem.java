@@ -21,11 +21,9 @@ import swervelib.SwerveInputStream;
 import swervelib.parser.SwerveParser;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Supplier;
 
 public class SwerveSubsystem extends SubsystemBase {
 
@@ -137,12 +135,7 @@ public class SwerveSubsystem extends SubsystemBase {
   }
 
   public Pose2d getPose() {
-    try {
-      Method m = swerveDrive.getClass().getMethod("getPose");
-      Object poseObj = m.invoke(swerveDrive);
-      if (poseObj instanceof Pose2d pose) return pose;
-    } catch (Exception ignored) {}
-    return new Pose2d();
+    return swerveDrive.getPose();
   }
 
   public Rotation2d getHeading() {
@@ -150,78 +143,30 @@ public class SwerveSubsystem extends SubsystemBase {
   }
 
   public void resetPose(Pose2d pose) {
-    try {
-      Method m = swerveDrive.getClass().getMethod("resetOdometry", Pose2d.class);
-      m.invoke(swerveDrive, pose);
-      return;
-    } catch (Exception ignored) {}
-
-    try {
-      Method m = swerveDrive.getClass().getMethod("resetOdometry", Pose2d.class, Rotation2d.class);
-      m.invoke(swerveDrive, pose, pose.getRotation());
-    } catch (Exception ignored) {}
+    swerveDrive.resetOdometry(pose);
   }
 
   public ChassisSpeeds getRobotRelativeSpeeds() {
-    try {
-      Method m = swerveDrive.getClass().getMethod("getRobotVelocity");
-      Object speedsObj = m.invoke(swerveDrive);
-      if (speedsObj instanceof ChassisSpeeds speeds) return speeds;
-    } catch (Exception ignored) {}
-    return new ChassisSpeeds();
+    return swerveDrive.getRobotVelocity();
   }
 
   public void driveRobotRelative(ChassisSpeeds speeds) {
-    try {
-      Method m = swerveDrive.getClass().getMethod("drive", ChassisSpeeds.class);
-      m.invoke(swerveDrive, speeds);
-    } catch (Exception e) {
-      DriverStation.reportError("swerveDrive.drive failed: " + e.getMessage(), e.getStackTrace());
-    }
+    swerveDrive.drive(speeds);
   }
 
   public Command driveFieldOriented(SwerveInputStream inputStream) {
-    return run(() -> {
-      try {
-        Method m = swerveDrive.getClass().getMethod("driveFieldOriented", SwerveInputStream.class);
-        m.invoke(swerveDrive, inputStream);
-      } catch (Exception e) {
-        DriverStation.reportError("driveFieldOriented failed: " + e.getMessage(), e.getStackTrace());
-      }
-    });
-  }
-
-  public void setYaw(Rotation2d yaw) {
-    try {
-      Method m = swerveDrive.getClass().getMethod("setGyro", Rotation2d.class);
-      m.invoke(swerveDrive, yaw);
-    } catch (Exception ignored) {}
+    return run(() -> swerveDrive.driveFieldOriented(inputStream.get()));
   }
 
   public void zeroGyro() {
-    try {
-      Method m = swerveDrive.getClass().getMethod("zeroGyro");
-      m.invoke(swerveDrive);
-    } catch (Exception ignored) {
-      // Fallback: set yaw to 0
-      setYaw(new Rotation2d());
-    }
+    swerveDrive.zeroGyro();
   }
 
   public boolean isVisionFusionSupported() {
-    try {
-      swerveDrive.getClass().getMethod("addVisionMeasurement", Pose2d.class, double.class);
-      return true;
-    } catch (Exception ignored) {}
-    return false;
+    return true;
   }
 
   public void addVisionMeasurement(Pose2d pose, double timestampSeconds) {
-    try {
-      Method m = swerveDrive.getClass().getMethod("addVisionMeasurement", Pose2d.class, double.class);
-      m.invoke(swerveDrive, pose, timestampSeconds);
-    } catch (Exception e) {
-      DriverStation.reportError("addVisionMeasurement failed: " + e.getMessage(), e.getStackTrace());
-    }
+    swerveDrive.addVisionMeasurement(pose, timestampSeconds);
   }
 }
