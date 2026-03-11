@@ -21,6 +21,7 @@ import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.LinearActuatorSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.SwerveSubsystem;
 import frc.robot.subsystems.TransportSubsystem;
@@ -36,6 +37,7 @@ public class RobotContainer {
   private final TransportSubsystem transport = new TransportSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem();
   private final HoodSubsystem hood = new HoodSubsystem();
+  private final LinearActuatorSubsystem linearActuator = new LinearActuatorSubsystem();
   private final ClimberSubsystem climber = new ClimberSubsystem();
   private final VisionSubsystem vision = new VisionSubsystem();
 
@@ -145,6 +147,12 @@ public class RobotContainer {
 
     // D-pad Down: stop shooter immediately (zero voltage, no PID to zero)
     driver.povDown().onTrue(Commands.runOnce(shooter::stop, shooter));
+
+    // Linear actuator test on PWM 9.
+    // D-pad Right: half open
+    driver.povRight().onTrue(Commands.runOnce(linearActuator::moveHalfOpen, linearActuator));
+    // D-pad Left: fully closed
+    driver.povLeft().onTrue(Commands.runOnce(linearActuator::moveClosed, linearActuator));
 
     // Climber bindings — uncomment when climber is ready
     // D-pad Left: toggle climber down (close)

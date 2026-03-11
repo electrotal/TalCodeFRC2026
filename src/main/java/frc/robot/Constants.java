@@ -161,6 +161,23 @@ public final class Constants {
     private HoodConstants() {}
   }
 
+  public static final class LinearActuatorConstants {
+    // Actuonix L16 RC actuator on roboRIO PWM.
+    public static final int kPwmPort = 9;
+
+    // Typical RC pulse range for Actuonix R-series control boards.
+    public static final int kMinPulseUs = 1000;
+    public static final int kCenterPulseUs = 1500;
+    public static final int kMaxPulseUs = 2000;
+
+    // Servo-style normalized setpoints [0,1].
+    // Tune these if direction/range needs adjustment.
+    public static final double kClosedPos = 0.0;
+    public static final double kHalfOpenPos = 0.5;
+
+    private LinearActuatorConstants() {}
+  }
+
   public static final class FeedConstants {
     public static final double kTransportPercent = 0.85;
 

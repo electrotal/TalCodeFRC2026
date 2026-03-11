@@ -72,7 +72,7 @@ public class VisionFusionSubsystem extends SubsystemBase {
     Pose2d current = swerve.getPose();
     double jump = current.getTranslation().getDistance(meas.pose.getTranslation());
     SmartDashboard.putNumber("Vision/Fusion/PoseJumpM", jump);
-
+    
     if (jump > Constants.VisionConstants.kMaxPoseJumpMeters) {
       SmartDashboard.putString("Vision/Fusion/RejectReason", "jump=" + String.format("%.2f", jump) + "m too large");
       return;
