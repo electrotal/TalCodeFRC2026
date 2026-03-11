@@ -34,6 +34,14 @@ public class VisionSubsystem extends SubsystemBase {
 
   public VisionSubsystem(String tableName) {
     limelightTable = NetworkTableInstance.getDefault().getTable(tableName);
+
+    // Publish Limelight stream URL directly to the CameraPublisher NT table
+    // so Elastic discovers it as a Camera Stream widget source
+    NetworkTableInstance.getDefault()
+        .getTable("CameraPublisher")
+        .getSubTable("Limelight")
+        .getEntry("streams")
+        .setStringArray(new String[]{"mjpeg:http://limelight.local:5800/stream.mjpeg"});
   }
 
   // tv == 1 means Limelight has a valid target
@@ -59,6 +67,9 @@ public class VisionSubsystem extends SubsystemBase {
     double xMeters = arr[0];
     double yMeters = arr[1];
     double yawDeg = arr[5];
+
+    // Limelight publishes all-zeros when no valid estimate — reject it
+    if (xMeters == 0.0 && yMeters == 0.0) return Optional.empty();
 
     // Prefer latency from the pose array, else use cl + tl
     double totalLatencyMs;

@@ -40,7 +40,7 @@ public final class Constants {
     public static final int kShooterBottomKraken = 23;
 
     // Climber
-    public static final int kClimberKraken = 50;
+    public static final int kClimberKraken = 26;
 
     // Hood (NEO Vortex on Spark Flex)
     public static final int kHoodNeoVortex = 60;
@@ -208,7 +208,7 @@ public final class Constants {
   public static final class VisionConstants {
     public static final double kMaxPoseJumpMeters = 1.25;
     public static final double kMaxLatencySeconds = 0.25;
-    public static final int kMinTagCount = 2;
+    public static final int kMinTagCount = 1;
     private VisionConstants() {}
   }
 

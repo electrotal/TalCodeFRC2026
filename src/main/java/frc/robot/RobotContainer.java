@@ -15,6 +15,8 @@ import frc.robot.commands.DriveFaceVirtualGoal;
 import frc.robot.commands.ResetGyro;
 import frc.robot.commands.RunTransportWhileHeld;
 import frc.robot.commands.ToggleIntake;
+import frc.robot.util.FieldTargetUtil;
+import frc.robot.util.ShotMap;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
@@ -79,6 +81,12 @@ public class RobotContainer {
         shooter);
   }
 
+  /** Apply deadband and scale raw stick [-1,1] to field-relative m/s. */
+  private double scaledDriveInput(double raw) {
+    if (Math.abs(raw) < OperatorConstants.DEADBAND) return 0.0;
+    return raw * Constants.maxSpeed * 0.8;
+  }
+
   private void configureBindings() {
     Trigger menuAndView = driver.start().and(driver.back());
     menuAndView.onTrue(new ResetGyro(drivebase));
@@ -102,21 +110,55 @@ public class RobotContainer {
             transport));
 
 
+    // Drive + auto-rotate to hub — translation stays field-oriented, rotation locks on target
     driver.leftStick().toggleOnTrue(
         new frc.robot.commands.DriveFaceHub(
             drivebase,
-            () -> -driver.getLeftY(),
-            () -> -driver.getLeftX()
+            () -> scaledDriveInput(-driver.getLeftY()),
+            () -> scaledDriveInput(-driver.getLeftX())
         )
     );
 
+    // Drive + auto-rotate to virtual goal (shooting on the move)
     driver.rightStick().toggleOnTrue(
         new DriveFaceVirtualGoal(
             drivebase,
-            () -> -driver.getLeftY(),
-            () -> -driver.getLeftX()
+            () -> scaledDriveInput(-driver.getLeftY()),
+            () -> scaledDriveInput(-driver.getLeftX())
         )
     );
+
+    // D-pad Up: toggle distance-based shooter RPM (continuously updates from robot position)
+    // Also publishes Shot/HoodRot for future hood integration
+    driver.povUp().toggleOnTrue(
+        Commands.runEnd(
+            () -> {
+              double dist = FieldTargetUtil.distanceToHubMeters(drivebase.getPose());
+              ShotMap.ShotSolution shot = ShotMap.calculate(dist);
+              shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
+              SmartDashboard.putNumber("Shot/DistanceM", shot.distanceMeters());
+              SmartDashboard.putNumber("Shot/HoodRot", shot.hoodRot());
+            },
+            shooter::stop,
+            shooter)
+    );
+
+    // D-pad Down: stop shooter immediately (zero voltage, no PID to zero)
+    driver.povDown().onTrue(Commands.runOnce(shooter::stop, shooter));
+
+    // Climber bindings — uncomment when climber is ready
+    // D-pad Left: toggle climber down (close)
+    // driver.povLeft().toggleOnTrue(
+    //     Commands.startEnd(
+    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
+    //         climber::stop,
+    //         climber));
+    // D-pad Right: toggle climber up (open)
+    // driver.povRight().toggleOnTrue(
+    //     Commands.startEnd(
+    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
+    //         climber::stop,
+    //         climber));
   }
 
   public Command getAutonomousCommand() {

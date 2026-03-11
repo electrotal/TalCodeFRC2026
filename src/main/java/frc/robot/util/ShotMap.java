@@ -1,7 +1,13 @@
 package frc.robot.util;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 
+/**
+ * Linear-interpolation shot lookup (like WCP CC 2026).
+ * Three calibration points: distance → RPM + hood rotation.
+ * All calibration values are live-tunable from SmartDashboard/Elastic under "ShotCal/".
+ */
 public final class ShotMap {
 
   public static final class ShotSolution {
@@ -24,50 +30,60 @@ public final class ShotMap {
       this.bottomRpm = bottomRpm;
     }
 
-    public double distanceMeters() {
-      return distanceMeters;
-    }
-
-    public double hoodRot() {
-      return hoodRot;
-    }
-
-    public double topRpm() {
-      return topRpm;
-    }
-
-    public double midRpm() {
-      return midRpm;
-    }
-
-    public double bottomRpm() {
-      return bottomRpm;
-    }
+    public double distanceMeters() { return distanceMeters; }
+    public double hoodRot() { return hoodRot; }
+    public double topRpm() { return topRpm; }
+    public double midRpm() { return midRpm; }
+    public double bottomRpm() { return bottomRpm; }
   }
+
+  private static boolean initialized = false;
 
   private ShotMap() {}
 
+  private static void initTunables() {
+    if (initialized) return;
+    initialized = true;
+
+    SmartDashboard.putNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]);
+    SmartDashboard.putNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]);
+    SmartDashboard.putNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]);
+
+    SmartDashboard.putNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]);
+    SmartDashboard.putNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]);
+    SmartDashboard.putNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]);
+
+    SmartDashboard.putNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]);
+    SmartDashboard.putNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]);
+    SmartDashboard.putNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]);
+  }
+
+  /**
+   * Linear-interpolation lookup from live-tunable calibration points.
+   * Continuously callable — reads current distance, returns interpolated RPM + hood.
+   */
   public static ShotSolution calculate(double distanceMeters) {
-    double hoodRot = LinearInterpolation.lookup(
-        Constants.ShotLookup.kDistanceM,
-        Constants.ShotLookup.kHoodRot,
-        distanceMeters);
+    initTunables();
 
-    double topRpm = LinearInterpolation.lookup(
-        Constants.ShotLookup.kDistanceM,
-        Constants.ShotLookup.kTopRpm,
-        distanceMeters);
+    double[] dists = {
+        SmartDashboard.getNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]),
+        SmartDashboard.getNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]),
+        SmartDashboard.getNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]),
+    };
+    double[] rpms = {
+        SmartDashboard.getNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]),
+        SmartDashboard.getNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]),
+        SmartDashboard.getNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]),
+    };
+    double[] hoods = {
+        SmartDashboard.getNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]),
+        SmartDashboard.getNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]),
+        SmartDashboard.getNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]),
+    };
 
-    double midRpm = LinearInterpolation.lookup(
-        Constants.ShotLookup.kDistanceM,
-        Constants.ShotLookup.kMidRpm,
-        distanceMeters);
+    double rpm = LinearInterpolation.lookup(dists, rpms, distanceMeters);
+    double hoodRot = LinearInterpolation.lookup(dists, hoods, distanceMeters);
 
-    double bottomRpm = LinearInterpolation.lookup(
-        Constants.ShotLookup.kDistanceM,
-        Constants.ShotLookup.kBottomRpm,
-        distanceMeters);
-
-    return new ShotSolution(distanceMeters, hoodRot, topRpm, midRpm, bottomRpm);
+    return new ShotSolution(distanceMeters, hoodRot, rpm, rpm, rpm);
   }
 }
