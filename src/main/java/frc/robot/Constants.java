@@ -90,7 +90,7 @@ public final class Constants {
     public static final double kPivotI = 0.0;
     public static final double kPivotD = 0.03;
 
-    public static final double kPivotMaxOut = 0.35;
+    public static final double kPivotMaxOut = 0.2;
     public static final double kPivotToleranceRot = 0.02;
 
     public static final double kRollerPercent = 0.80;
@@ -163,7 +163,7 @@ public final class Constants {
 
   public static final class LinearActuatorConstants {
     // Actuonix L16 RC actuator on roboRIO PWM.
-    public static final int kPwmPort = 9;
+    public static final int kPwmPort = 0;
 
     // Typical RC pulse range for Actuonix R-series control boards.
     public static final int kMinPulseUs = 1000;
