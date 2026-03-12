@@ -74,6 +74,8 @@ public class ShooterSubsystem extends SubsystemBase {
     MotorOutputConfigs out = new MotorOutputConfigs();
     out.NeutralMode = NeutralModeValue.Coast;
     out.Inverted = invert ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    out.PeakForwardDutyCycle =  0.75;
+    out.PeakReverseDutyCycle = -0.75;
     motor.getConfigurator().apply(out);
 
     CurrentLimitsConfigs cl = new CurrentLimitsConfigs();
