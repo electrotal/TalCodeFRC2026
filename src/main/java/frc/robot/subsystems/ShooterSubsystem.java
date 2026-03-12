@@ -44,11 +44,12 @@ public class ShooterSubsystem extends SubsystemBase {
   private boolean leftShooterOn   = true;
 
   // Live-tunable PID gains
-  private double liveKP = Constants.ShooterConstants.kVelocityP;
-  private double liveKI = Constants.ShooterConstants.kVelocityI;
-  private double liveKD = Constants.ShooterConstants.kVelocityD;
-  private double liveKV = Constants.ShooterConstants.kVelocityV;
-  private double liveKS = Constants.ShooterConstants.kVelocityS;
+  private double liveKP     = Constants.ShooterConstants.kVelocityP;
+  private double liveKI     = Constants.ShooterConstants.kVelocityI;
+  private double liveKD     = Constants.ShooterConstants.kVelocityD;
+  private double liveKV     = Constants.ShooterConstants.kVelocityV;
+  private double liveKS     = Constants.ShooterConstants.kVelocityS;
+  private double liveKIZone = Constants.ShooterConstants.kVelocityIZone;
 
   public ShooterSubsystem() {
     configureMotor(top, Constants.MotorInverts.kShooterTopInverted);
@@ -61,11 +62,12 @@ public class ShooterSubsystem extends SubsystemBase {
     SmartDashboard.putBoolean("Shooter/MiddleShooterOn", middleShooterOn);
     SmartDashboard.putBoolean("Shooter/LeftShooterOn",   leftShooterOn);
 
-    SmartDashboard.putNumber("Shooter/PID/kP", liveKP);
-    SmartDashboard.putNumber("Shooter/PID/kI", liveKI);
-    SmartDashboard.putNumber("Shooter/PID/kD", liveKD);
-    SmartDashboard.putNumber("Shooter/PID/kV", liveKV);
-    SmartDashboard.putNumber("Shooter/PID/kS", liveKS);
+    SmartDashboard.putNumber("Shooter/PID/kP",     liveKP);
+    SmartDashboard.putNumber("Shooter/PID/kI",     liveKI);
+    SmartDashboard.putNumber("Shooter/PID/kD",     liveKD);
+    SmartDashboard.putNumber("Shooter/PID/kV",     liveKV);
+    SmartDashboard.putNumber("Shooter/PID/kS",     liveKS);
+    SmartDashboard.putNumber("Shooter/PID/kIZone", liveKIZone);
   }
 
   private void configureMotor(TalonFX motor, boolean invert) {
@@ -82,11 +84,12 @@ public class ShooterSubsystem extends SubsystemBase {
     motor.getConfigurator().apply(cl);
 
     Slot0Configs slot0 = new Slot0Configs();
-    slot0.kP = Constants.ShooterConstants.kVelocityP;
-    slot0.kI = Constants.ShooterConstants.kVelocityI;
-    slot0.kD = Constants.ShooterConstants.kVelocityD;
-    slot0.kV = Constants.ShooterConstants.kVelocityV;
-    slot0.kS = Constants.ShooterConstants.kVelocityS;
+    slot0.kP     = Constants.ShooterConstants.kVelocityP;
+    slot0.kI     = Constants.ShooterConstants.kVelocityI;
+    slot0.kD     = Constants.ShooterConstants.kVelocityD;
+    slot0.kV     = Constants.ShooterConstants.kVelocityV;
+    slot0.kS     = Constants.ShooterConstants.kVelocityS;
+    slot0.kIZone = Constants.ShooterConstants.kVelocityIZone;
     motor.getConfigurator().apply(slot0);
   }
 
@@ -155,11 +158,14 @@ public class ShooterSubsystem extends SubsystemBase {
   public double getLiveHighRpm() { return liveHighRpm; }
 
   public boolean isAtSpeed() {
+    if (!(top.getAppliedControl() instanceof VelocityVoltage)) return false;
+    if (!(mid.getAppliedControl() instanceof VelocityVoltage)) return false;
+    if (!(bottom.getAppliedControl() instanceof VelocityVoltage)) return false;
     double tol = Constants.ShooterConstants.kReadyRpmTolerance;
     boolean topOk = Math.abs(getTopRpm() - targetTopRpm) <= tol;
     boolean midOk = Math.abs(getMidRpm() - targetMidRpm) <= tol;
     boolean botOk = Math.abs(getBottomRpm() - targetBottomRpm) <= tol;
-    return velocityControlEnabled && topOk && midOk && botOk;
+    return topOk && midOk && botOk;
   }
 
   public boolean isAtSpeedForTime(double seconds) {
@@ -194,16 +200,18 @@ public class ShooterSubsystem extends SubsystemBase {
     leftShooterOn   = SmartDashboard.getBoolean("Shooter/LeftShooterOn",   leftShooterOn);
 
     // Read PID gains from Elastic and hot-apply if changed
-    double newKP = SmartDashboard.getNumber("Shooter/PID/kP", liveKP);
-    double newKI = SmartDashboard.getNumber("Shooter/PID/kI", liveKI);
-    double newKD = SmartDashboard.getNumber("Shooter/PID/kD", liveKD);
-    double newKV = SmartDashboard.getNumber("Shooter/PID/kV", liveKV);
-    double newKS = SmartDashboard.getNumber("Shooter/PID/kS", liveKS);
+    double newKP     = SmartDashboard.getNumber("Shooter/PID/kP",     liveKP);
+    double newKI     = SmartDashboard.getNumber("Shooter/PID/kI",     liveKI);
+    double newKD     = SmartDashboard.getNumber("Shooter/PID/kD",     liveKD);
+    double newKV     = SmartDashboard.getNumber("Shooter/PID/kV",     liveKV);
+    double newKS     = SmartDashboard.getNumber("Shooter/PID/kS",     liveKS);
+    double newKIZone = SmartDashboard.getNumber("Shooter/PID/kIZone", liveKIZone);
 
-    if (newKP != liveKP || newKI != liveKI || newKD != liveKD || newKV != liveKV || newKS != liveKS) {
-      liveKP = newKP; liveKI = newKI; liveKD = newKD; liveKV = newKV; liveKS = newKS;
+    if (newKP != liveKP || newKI != liveKI || newKD != liveKD || newKV != liveKV || newKS != liveKS || newKIZone != liveKIZone) {
+      liveKP = newKP; liveKI = newKI; liveKD = newKD; liveKV = newKV; liveKS = newKS; liveKIZone = newKIZone;
       Slot0Configs slot0 = new Slot0Configs();
       slot0.kP = liveKP; slot0.kI = liveKI; slot0.kD = liveKD; slot0.kV = liveKV; slot0.kS = liveKS;
+      slot0.kIZone = liveKIZone;
       top.getConfigurator().apply(slot0);
       mid.getConfigurator().apply(slot0);
       bottom.getConfigurator().apply(slot0);

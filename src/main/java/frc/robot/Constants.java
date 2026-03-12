@@ -114,11 +114,13 @@ public final class Constants {
     public static final double kMidRpm = 4500.0;
     public static final double kBottomRpm = 4500.0;
 
-    public static final double kVelocityP = 0.18;
-    public static final double kVelocityI = 0.0;
+    public static final double kVelocityP = 0.5;
+    public static final double kVelocityI = 2.0;
     public static final double kVelocityD = 0.0;
-    public static final double kVelocityV = 12.0 / 100.0;
+    public static final double kVelocityV = 12.0 / 100.0; // 12V at Kraken X60 free speed (100 RPS)
     public static final double kVelocityS = 0.0;
+    // IZone: integrator only accumulates within ±500 RPM of target, preventing windup on startup/stall
+    public static final double kVelocityIZone = 500.0 / 60.0; // 500 RPM in RPS (CTRE native units)
 
     public static final double kReadyRpmTolerance = 100.0;
     public static final double kReadyTimeSeconds = 0.20;
