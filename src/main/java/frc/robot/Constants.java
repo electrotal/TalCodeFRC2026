@@ -45,6 +45,9 @@ public final class Constants {
     // Hood (NEO Vortex on Spark Flex)
     public static final int kHoodNeoVortex = 60;
 
+    // Hood angle (NEO 1.1 on Spark Max)
+    public static final int kHoodAngleNeo = 61;
+
     private CanId() {}
   }
 
@@ -62,6 +65,7 @@ public final class Constants {
     public static final boolean kClimberInverted = false;
 
     public static final boolean kHoodInverted = false;
+    public static final boolean kHoodAngleInverted = false;
 
     private MotorInverts() {}
   }
@@ -136,7 +140,7 @@ public final class Constants {
    */
   public static final class HoodConstants {
     public static final int kHoodMotorCanId = CanId.kHoodNeoVortex;
-    public static final int kThroughBoreDio = 1;
+    public static final int kThroughBoreDio = 3;
 
     /**
      * If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
@@ -159,23 +163,6 @@ public final class Constants {
     public static final double kToleranceHoodRot = 0.005;
 
     private HoodConstants() {}
-  }
-
-  public static final class LinearActuatorConstants {
-    // Actuonix L16 RC actuator on roboRIO PWM.
-    public static final int kPwmPort = 0;
-
-    // Typical RC pulse range for Actuonix R-series control boards.
-    public static final int kMinPulseUs = 1000;
-    public static final int kCenterPulseUs = 1500;
-    public static final int kMaxPulseUs = 2000;
-
-    // Servo-style normalized setpoints [0,1].
-    // Tune these if direction/range needs adjustment.
-    public static final double kClosedPos = 0.0;
-    public static final double kHalfOpenPos = 0.5;
-
-    private LinearActuatorConstants() {}
   }
 
   public static final class FeedConstants {

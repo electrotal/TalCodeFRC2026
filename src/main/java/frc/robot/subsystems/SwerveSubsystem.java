@@ -160,8 +160,6 @@ public class SwerveSubsystem extends SubsystemBase {
 
   public void zeroGyro() {
     swerveDrive.zeroGyro();
-    // Offset by 180° so the driver faces the robot's back during reset
-    resetPose(new Pose2d(getPose().getTranslation(), Rotation2d.fromDegrees(180.0)));
   }
 
   public boolean isVisionFusionSupported() {

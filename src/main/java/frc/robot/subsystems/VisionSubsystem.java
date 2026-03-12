@@ -1,15 +1,22 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.HttpCamera;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import java.util.Optional;
 
 public class VisionSubsystem extends SubsystemBase {
+
+  private double lastHeartbeat = 0.0;
+  private double lastHeartbeatChangeTime = 0.0;
+  private static final double HEARTBEAT_TIMEOUT_SEC = 0.5;
 
   // Simple container for a vision pose measurement with timestamp
   public static final class VisionMeasurement {
@@ -35,13 +42,24 @@ public class VisionSubsystem extends SubsystemBase {
   public VisionSubsystem(String tableName) {
     limelightTable = NetworkTableInstance.getDefault().getTable(tableName);
 
-    // Publish Limelight stream URL directly to the CameraPublisher NT table
-    // so Elastic discovers it as a Camera Stream widget source
-    NetworkTableInstance.getDefault()
-        .getTable("CameraPublisher")
-        .getSubTable("Limelight")
-        .getEntry("streams")
-        .setStringArray(new String[]{"mjpeg:http://limelight.local:5800/stream.mjpeg"});
+    // Register Limelight as an HttpCamera so Elastic discovers it via CameraServer
+    HttpCamera limelightCamera = new HttpCamera("Limelight", "http://limelight.local:5800/stream.mjpeg");
+    CameraServer.startAutomaticCapture(limelightCamera);
+  }
+
+  public boolean isConnected() {
+    double hb = limelightTable.getEntry("hb").getDouble(0.0);
+    double now = Timer.getFPGATimestamp();
+    if (hb != lastHeartbeat) {
+      lastHeartbeat = hb;
+      lastHeartbeatChangeTime = now;
+    }
+    return (now - lastHeartbeatChangeTime) < HEARTBEAT_TIMEOUT_SEC;
+  }
+
+  @Override
+  public void periodic() {
+    SmartDashboard.putBoolean("Vision/LimelightConnected", isConnected());
   }
 
   // tv == 1 means Limelight has a valid target

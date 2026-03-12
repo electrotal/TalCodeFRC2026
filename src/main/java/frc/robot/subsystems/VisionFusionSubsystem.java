@@ -18,10 +18,14 @@ public class VisionFusionSubsystem extends SubsystemBase {
   // any real correction, so we hard-reset on the first good measurement instead.
   private boolean odometrySeeded = false;
 
+  // When true, skip the pose jump filter and accept any valid vision measurement
+  private boolean forceAcceptAll = false;
+
   public VisionFusionSubsystem(SwerveSubsystem swerve, VisionSubsystem vision) {
     this.swerve = swerve;
     this.vision = vision;
     SmartDashboard.putBoolean("Vision/Fusion/Seeded", false);
+    SmartDashboard.putBoolean("Vision/Fusion/ForceAcceptAll", forceAcceptAll);
   }
 
   @Override
@@ -58,6 +62,9 @@ public class VisionFusionSubsystem extends SubsystemBase {
       return;
     }
 
+    // Read tunable boolean from Elastic each cycle
+    forceAcceptAll = SmartDashboard.getBoolean("Vision/Fusion/ForceAcceptAll", forceAcceptAll);
+
     // On first valid measurement, hard-reset odometry so the jump filter works correctly
     // going forward. Without this, the robot starts at (0,0) and every real tag reading
     // gets rejected because it looks like a giant jump.
@@ -72,8 +79,8 @@ public class VisionFusionSubsystem extends SubsystemBase {
     Pose2d current = swerve.getPose();
     double jump = current.getTranslation().getDistance(meas.pose.getTranslation());
     SmartDashboard.putNumber("Vision/Fusion/PoseJumpM", jump);
-    
-    if (jump > Constants.VisionConstants.kMaxPoseJumpMeters) {
+
+    if (!forceAcceptAll && jump > Constants.VisionConstants.kMaxPoseJumpMeters) {
       SmartDashboard.putString("Vision/Fusion/RejectReason", "jump=" + String.format("%.2f", jump) + "m too large");
       return;
     }

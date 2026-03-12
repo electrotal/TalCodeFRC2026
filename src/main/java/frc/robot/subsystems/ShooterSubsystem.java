@@ -38,6 +38,18 @@ public class ShooterSubsystem extends SubsystemBase {
   private double liveLowRpm  = Constants.ShooterConstants.kToggleTestLowRpm;
   private double liveHighRpm = Constants.ShooterConstants.kToggleTestHighRpm;
 
+  // Per-motor kill switches — toggle from Elastic to disable individual shooters
+  private boolean rightShooterOn  = true;
+  private boolean middleShooterOn = true;
+  private boolean leftShooterOn   = true;
+
+  // Live-tunable PID gains
+  private double liveKP = Constants.ShooterConstants.kVelocityP;
+  private double liveKI = Constants.ShooterConstants.kVelocityI;
+  private double liveKD = Constants.ShooterConstants.kVelocityD;
+  private double liveKV = Constants.ShooterConstants.kVelocityV;
+  private double liveKS = Constants.ShooterConstants.kVelocityS;
+
   public ShooterSubsystem() {
     configureMotor(top, Constants.MotorInverts.kShooterTopInverted);
     configureMotor(mid, Constants.MotorInverts.kShooterMidInverted);
@@ -45,6 +57,15 @@ public class ShooterSubsystem extends SubsystemBase {
 
     SmartDashboard.putNumber("Shooter/ToggleLowRpm",  liveLowRpm);
     SmartDashboard.putNumber("Shooter/ToggleHighRpm", liveHighRpm);
+    SmartDashboard.putBoolean("Shooter/RightShooterOn",  rightShooterOn);
+    SmartDashboard.putBoolean("Shooter/MiddleShooterOn", middleShooterOn);
+    SmartDashboard.putBoolean("Shooter/LeftShooterOn",   leftShooterOn);
+
+    SmartDashboard.putNumber("Shooter/PID/kP", liveKP);
+    SmartDashboard.putNumber("Shooter/PID/kI", liveKI);
+    SmartDashboard.putNumber("Shooter/PID/kD", liveKD);
+    SmartDashboard.putNumber("Shooter/PID/kV", liveKV);
+    SmartDashboard.putNumber("Shooter/PID/kS", liveKS);
   }
 
   private void configureMotor(TalonFX motor, boolean invert) {
@@ -93,17 +114,17 @@ public class ShooterSubsystem extends SubsystemBase {
   }
 
   private void applyVelocityTargets() {
-    top.setControl(topVelReq.withVelocity(targetTopRpm / 60.0));
-    mid.setControl(midVelReq.withVelocity(targetMidRpm / 60.0));
-    bottom.setControl(bottomVelReq.withVelocity(targetBottomRpm / 60.0));
+    top.setControl(topVelReq.withVelocity(rightShooterOn  ? targetTopRpm / 60.0 : 0.0));
+    mid.setControl(midVelReq.withVelocity(middleShooterOn ? targetMidRpm / 60.0 : 0.0));
+    bottom.setControl(bottomVelReq.withVelocity(leftShooterOn ? targetBottomRpm / 60.0 : 0.0));
   }
 
   public void setAllPercent(double percent) {
     velocityControlEnabled = false;
     percent = AngleMath.clamp(percent, -1.0, 1.0);
-    top.setControl(pctReq.withOutput(percent));
-    mid.setControl(pctReq.withOutput(percent));
-    bottom.setControl(pctReq.withOutput(percent));
+    top.setControl(pctReq.withOutput(rightShooterOn  ? percent : 0.0));
+    mid.setControl(pctReq.withOutput(middleShooterOn ? percent : 0.0));
+    bottom.setControl(pctReq.withOutput(leftShooterOn ? percent : 0.0));
   }
 
   public double getTopRpm() {
@@ -166,6 +187,27 @@ public class ShooterSubsystem extends SubsystemBase {
   public void periodic() {
     liveLowRpm  = SmartDashboard.getNumber("Shooter/ToggleLowRpm",  liveLowRpm);
     liveHighRpm = SmartDashboard.getNumber("Shooter/ToggleHighRpm", liveHighRpm);
+
+    // Read kill switches from Elastic
+    rightShooterOn  = SmartDashboard.getBoolean("Shooter/RightShooterOn",  rightShooterOn);
+    middleShooterOn = SmartDashboard.getBoolean("Shooter/MiddleShooterOn", middleShooterOn);
+    leftShooterOn   = SmartDashboard.getBoolean("Shooter/LeftShooterOn",   leftShooterOn);
+
+    // Read PID gains from Elastic and hot-apply if changed
+    double newKP = SmartDashboard.getNumber("Shooter/PID/kP", liveKP);
+    double newKI = SmartDashboard.getNumber("Shooter/PID/kI", liveKI);
+    double newKD = SmartDashboard.getNumber("Shooter/PID/kD", liveKD);
+    double newKV = SmartDashboard.getNumber("Shooter/PID/kV", liveKV);
+    double newKS = SmartDashboard.getNumber("Shooter/PID/kS", liveKS);
+
+    if (newKP != liveKP || newKI != liveKI || newKD != liveKD || newKV != liveKV || newKS != liveKS) {
+      liveKP = newKP; liveKI = newKI; liveKD = newKD; liveKV = newKV; liveKS = newKS;
+      Slot0Configs slot0 = new Slot0Configs();
+      slot0.kP = liveKP; slot0.kI = liveKI; slot0.kD = liveKD; slot0.kV = liveKV; slot0.kS = liveKS;
+      top.getConfigurator().apply(slot0);
+      mid.getConfigurator().apply(slot0);
+      bottom.getConfigurator().apply(slot0);
+    }
 
     if (velocityControlEnabled) {
       applyVelocityTargets();
