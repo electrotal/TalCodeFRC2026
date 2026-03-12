@@ -40,13 +40,13 @@ public final class Constants {
     public static final int kShooterBottomKraken = 23;
 
     // Climber
-    public static final int kClimberKraken = 26;
+    public static final int kClimberKraken = 25;
 
     // Hood (NEO Vortex on Spark Flex)
     public static final int kHoodNeoVortex = 60;
 
     // Hood angle (NEO 1.1 on Spark Max)
-    public static final int kHoodAngleNeo = 61;
+    public static final int kHoodAngleNeo = 26;
 
     private CanId() {}
   }
