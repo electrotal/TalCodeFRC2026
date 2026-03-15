@@ -218,6 +218,7 @@ public class IntakeSubsystem extends SubsystemBase {
     updateTunablesFromNT();
 
     SmartDashboard.putString("Intake/State", open ? "Open" : "Closed");
+    SmartDashboard.putBoolean("Intake/EncoderConnected", throughBore.isConnected());
     SmartDashboard.putNumber("Intake/Abs01", getAbs01());
     SmartDashboard.putNumber("Intake/Rel01", getRel01());
     SmartDashboard.putNumber("Intake/MeasRot", getMeasuredRot());

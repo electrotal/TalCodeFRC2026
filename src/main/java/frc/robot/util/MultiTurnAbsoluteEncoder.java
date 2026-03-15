@@ -14,6 +14,10 @@ public class MultiTurnAbsoluteEncoder {
     encoder = new DutyCycleEncoder(dioChannel);
   }
 
+  public boolean isConnected() {
+    return encoder.isConnected();
+  }
+
   // Returns absolute within one turn, rotations in range [0,1)
   public double getAbsRot() {
     return encoder.get();

@@ -146,19 +146,18 @@ public class RobotContainer {
     // D-pad Down: stop shooter immediately (zero voltage, no PID to zero)
     driver.povDown().onTrue(Commands.runOnce(shooter::stop, shooter));
 
-    // Climber bindings — uncomment when climber is ready
-    // D-pad Left: toggle climber down (close)
-    // driver.povLeft().toggleOnTrue(
-    //     Commands.startEnd(
-    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
-    //         climber::stop,
-    //         climber));
-    // D-pad Right: toggle climber up (open)
-    // driver.povRight().toggleOnTrue(
-    //     Commands.startEnd(
-    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
-    //         climber::stop,
-    //         climber));
+    // D-pad Left: toggle climber down
+    driver.povLeft().toggleOnTrue(
+        Commands.startEnd(
+            () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
+            climber::stop,
+            climber));
+    // D-pad Right: toggle climber up
+    driver.povRight().toggleOnTrue(
+        Commands.startEnd(
+            () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
+            climber::stop,
+            climber));
   }
 
   public Command getAutonomousCommand() {

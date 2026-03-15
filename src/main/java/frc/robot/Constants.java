@@ -177,8 +177,10 @@ public final class Constants {
   }
 
   public static final class ClimberConstants {
-    public static final double kClimbUpPercent = 0.70;
-    public static final double kClimbDownPercent = -0.50;
+    public static final double kClimbUpPercent = 0.60;
+    public static final double kClimbDownPercent = -0.60;
+    /** Stator current limit (amps) to protect the mechanism from stalling damage. */
+    public static final double kStatorCurrentLimit = 60;
     private ClimberConstants() {}
   }
 

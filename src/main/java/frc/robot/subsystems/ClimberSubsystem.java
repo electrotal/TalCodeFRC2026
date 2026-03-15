@@ -27,9 +27,9 @@ public class ClimberSubsystem extends SubsystemBase {
 
     CurrentLimitsConfigs cfg = new CurrentLimitsConfigs();
     cfg.SupplyCurrentLimitEnable = true;
-    cfg.SupplyCurrentLimit = 80;
+    cfg.SupplyCurrentLimit = 60;
     cfg.StatorCurrentLimitEnable = true;
-    cfg.StatorCurrentLimit = 120;
+    cfg.StatorCurrentLimit = Constants.ClimberConstants.kStatorCurrentLimit;
     climber.getConfigurator().apply(cfg);
   }
 
