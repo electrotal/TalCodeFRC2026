@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.util.FieldTargetUtil;
 import swervelib.SwerveDrive;
 import swervelib.SwerveInputStream;
 import swervelib.parser.SwerveParser;
@@ -128,6 +129,11 @@ public class SwerveSubsystem extends SubsystemBase {
     } catch (Exception e) {
       SmartDashboard.putString("Swerve/ConfigError", "Config parse failed: " + e.getMessage());
     }
+  }
+
+  @Override
+  public void periodic() {
+    SmartDashboard.putNumber("Shot/DistanceM", FieldTargetUtil.distanceToHubMeters(getPose()));
   }
 
   public SwerveDrive getSwerveDrive() {
