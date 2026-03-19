@@ -136,7 +136,7 @@ public class RobotContainer {
               double dist = FieldTargetUtil.distanceToHubMeters(drivebase.getPose());
               ShotMap.ShotSolution shot = ShotMap.calculate(dist);
               shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
-              SmartDashboard.putNumber("Shot/DistanceM", shot.distanceMeters());
+              SmartDashboard.putNumber("Shot/DistanceM", dist);
               SmartDashboard.putNumber("Shot/HoodRot", shot.hoodRot());
             },
             shooter::stop,

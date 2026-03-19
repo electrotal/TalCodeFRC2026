@@ -35,7 +35,7 @@ public class UpdateShotSetpointsFromDistance extends Command {
     hood.setHoodRot(shot.hoodRot());
     shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
 
-    SmartDashboard.putNumber("Shot/DistanceMeters", shot.distanceMeters());
+    SmartDashboard.putNumber("Shot/DistanceMeters", distanceMeters);
     SmartDashboard.putNumber("Shot/TargetHoodRot", shot.hoodRot());
     SmartDashboard.putNumber("Shot/TargetTopRpm", shot.topRpm());
     SmartDashboard.putNumber("Shot/TargetMidRpm", shot.midRpm());
