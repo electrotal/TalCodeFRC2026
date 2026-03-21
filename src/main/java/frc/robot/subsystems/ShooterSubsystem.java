@@ -159,6 +159,9 @@ public class ShooterSubsystem extends SubsystemBase {
   public double getLiveLowRpm()  { return liveLowRpm; }
   public double getLiveHighRpm() { return liveHighRpm; }
 
+  /** True while velocity control is active (i.e. shooter is spinning). */
+  public boolean isRunning() { return velocityControlEnabled; }
+
   public boolean isAtSpeed() {
     if (!velocityControlEnabled) return false;
     double tol = Constants.ShooterConstants.kReadyRpmTolerance;
