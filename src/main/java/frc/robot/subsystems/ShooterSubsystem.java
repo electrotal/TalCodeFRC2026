@@ -160,13 +160,12 @@ public class ShooterSubsystem extends SubsystemBase {
   public double getLiveHighRpm() { return liveHighRpm; }
 
   public boolean isAtSpeed() {
-    if (!(top.getAppliedControl() instanceof VelocityVoltage)) return false;
-    if (!(mid.getAppliedControl() instanceof VelocityVoltage)) return false;
-    if (!(bottom.getAppliedControl() instanceof VelocityVoltage)) return false;
+    if (!velocityControlEnabled) return false;
     double tol = Constants.ShooterConstants.kReadyRpmTolerance;
-    boolean topOk = Math.abs(getTopRpm() - targetTopRpm) <= tol;
-    boolean midOk = Math.abs(getMidRpm() - targetMidRpm) <= tol;
-    boolean botOk = Math.abs(getBottomRpm() - targetBottomRpm) <= tol;
+    // Disabled motors are skipped — they don't block the "ready" indication
+    boolean topOk = !rightShooterOn  || Math.abs(getTopRpm() - targetTopRpm) <= tol;
+    boolean midOk = !middleShooterOn || Math.abs(getMidRpm() - targetMidRpm) <= tol;
+    boolean botOk = !leftShooterOn   || Math.abs(getBottomRpm() - targetBottomRpm) <= tol;
     return topOk && midOk && botOk;
   }
 

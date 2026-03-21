@@ -14,6 +14,7 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.DriveFaceVirtualGoal;
 import frc.robot.commands.ResetGyro;
 import frc.robot.commands.RunTransportWhileHeld;
+import frc.robot.commands.ShooterReadyIndicator;
 import frc.robot.commands.ToggleIntake;
 import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
@@ -72,13 +73,17 @@ public class RobotContainer {
 
     drivebase.setDefaultCommand(teleopDrive);
     configureBindings();
+
+    // Rumble controller when shooter is at target speed
+    new ShooterReadyIndicator(shooter, driver.getHID()).schedule();
   }
 
   private Command createShooterToggleCommand(DoubleSupplier rpmSupplier) {
-    return Commands.startEnd(
+    // Use run() so the RPM is re-read every loop cycle — Elastic changes take effect immediately
+    return Commands.run(
         () -> shooter.setAllTargetRpm(rpmSupplier.getAsDouble()),
-        shooter::stop,
-        shooter);
+        shooter
+    ).finallyDo(interrupted -> shooter.stop());
   }
 
   /** Apply deadband and scale raw stick [-1,1] to field-relative m/s. */
