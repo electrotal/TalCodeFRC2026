@@ -91,6 +91,8 @@ public class DriverDisplaySubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Shooter/TopRPM", shooter.getTopRpm());
     SmartDashboard.putNumber("Shooter/MidRPM", shooter.getMidRpm());
     SmartDashboard.putNumber("Shooter/BottomRPM", shooter.getBottomRpm());
+
+    SmartDashboard.putNumber("Shooter/HubDistanceM", FieldTargetUtil.distanceToHubMeters(swerve.getPose()));
   }
 
   private void publishHood() {

@@ -40,13 +40,13 @@ public final class Constants {
     public static final int kShooterBottomKraken = 23;
 
     // Climber
-    public static final int kClimberKraken = 26;
+    public static final int kClimberKraken = 25;
 
     // Hood (NEO Vortex on Spark Flex)
     public static final int kHoodNeoVortex = 60;
 
     // Hood angle (NEO 1.1 on Spark Max)
-    public static final int kHoodAngleNeo = 61;
+    public static final int kHoodAngleNeo = 26;
 
     private CanId() {}
   }
@@ -71,7 +71,7 @@ public final class Constants {
   }
 
   public static final class IntakeConstants {
-    public static final int kThroughBoreDutyCycleDio = 0;
+    public static final int kThroughBoreDutyCycleDio = 2;
 
     // Pivot rotations per small sprocket rotation
     public static final double kSmallToPivotRatio = 1.0;
@@ -114,11 +114,13 @@ public final class Constants {
     public static final double kMidRpm = 4500.0;
     public static final double kBottomRpm = 4500.0;
 
-    public static final double kVelocityP = 0.18;
-    public static final double kVelocityI = 0.0;
+    public static final double kVelocityP = 1.0;
+    public static final double kVelocityI = 2.0;
     public static final double kVelocityD = 0.0;
-    public static final double kVelocityV = 12.0 / 100.0;
+    public static final double kVelocityV = 12.0 / 100.0; // 12V at Kraken X60 free speed (100 RPS)
     public static final double kVelocityS = 0.0;
+    // IZone: integrator only accumulates within ±500 RPM of target, preventing windup on startup/stall
+    public static final double kVelocityIZone = 500.0 / 60.0; // 500 RPM in RPS (CTRE native units)
 
     public static final double kReadyRpmTolerance = 100.0;
     public static final double kReadyTimeSeconds = 0.20;
@@ -139,21 +141,24 @@ public final class Constants {
    * - Your hood will likely use only part of that range.
    */
   public static final class HoodConstants {
-    public static final int kHoodMotorCanId = CanId.kHoodNeoVortex;
+    // NEO 1.1 on Spark Max
     public static final int kThroughBoreDio = 3;
 
     /**
-     * If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
-     */
-    public static final double kEncoderToHoodRatio = 1.0;
-
-    /**
-     * Encoder zero offset in ENCODER rotations, not hood rotations.
+     * Encoder zero offset: subtract from the raw absolute encoder reading
+     * so that 0.0 corresponds to the lowest (fully closed) position.
+     * Tune this from Elastic at runtime.
      */
     public static final double kEncoderOffsetRot = 0.0;
 
-    public static final double kMinHoodRot = 0.00;
-    public static final double kMaxHoodRot = 0.60;
+    /** Encoder position (after offset) for fully closed (lowest) position. */
+    public static final double kClosedPos = 0.0;
+
+    /** Encoder position (after offset) for fully open position. */
+    public static final double kOpenPos = 0.3;
+
+    /** Alias kept for SetHoodPreset compatibility. */
+    public static final double kMinHoodRot = kClosedPos;
 
     public static final double kP = 6.0;
     public static final double kI = 0.0;
