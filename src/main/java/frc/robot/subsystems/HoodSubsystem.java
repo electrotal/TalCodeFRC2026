@@ -9,8 +9,6 @@ import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.DutyCycle;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -35,10 +33,8 @@ public class HoodSubsystem extends SubsystemBase {
   private final SparkMax angleMotor =
       new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
 
-  private final DigitalInput encoderInput =
-      new DigitalInput(Constants.HoodConstants.kThroughBoreDio);
-  private final DutyCycle encoderDutyCycle = new DutyCycle(encoderInput);
-  private final DutyCycleEncoder encoder   = new DutyCycleEncoder(encoderDutyCycle);
+  private final DutyCycleEncoder encoder =
+      new DutyCycleEncoder(Constants.HoodConstants.kThroughBoreDio);
 
   // ── Control ─────────────────────────────────────────────────────────────────
 
@@ -100,9 +96,9 @@ public class HoodSubsystem extends SubsystemBase {
     return ((getHoodRot() - Constants.HoodConstants.kMinHoodRot) / range) * 100.0;
   }
 
-  /** True if the through-bore encoder is sending a signal (frequency > 0 Hz). */
+  /** True if the through-bore encoder has a valid signal. */
   public boolean isEncoderConnected() {
-    return encoderDutyCycle.getFrequency() > 0;
+    return encoder.isConnected();
   }
 
   public boolean atTarget() {
@@ -154,10 +150,9 @@ public class HoodSubsystem extends SubsystemBase {
     motor.set(out);
 
     // Telemetry
-    SmartDashboard.putNumber("Hood/PercentOpen",        getHoodPercent());
-    SmartDashboard.putBoolean("Hood/EncoderConnected",  isEncoderConnected());
-    SmartDashboard.putNumber("Hood/EncoderFrequencyHz", encoderDutyCycle.getFrequency());
-    SmartDashboard.putNumber("Hood/RawEncoder",         getRawEncoder());
+    SmartDashboard.putNumber("Hood/PercentOpen",       getHoodPercent());
+    SmartDashboard.putBoolean("Hood/EncoderConnected", isEncoderConnected());
+    SmartDashboard.putNumber("Hood/RawEncoder",        getRawEncoder());
     SmartDashboard.putNumber("Hood/OffsetEncoder",     getOffsetEncoder());
     SmartDashboard.putNumber("Hood/RotationRot",       getHoodRot());
     SmartDashboard.putNumber("Hood/TargetRot",         targetHoodRot);
