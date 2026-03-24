@@ -57,6 +57,11 @@ public class HoodSubsystem extends SubsystemBase {
 
     // Publish initial offset so it can be tuned from Elastic
     SmartDashboard.putNumber("Hood/EncoderOffset", encoderOffset);
+
+    // Publish initial PID values so they can be tuned from Elastic
+    SmartDashboard.putNumber("Hood/kP", Constants.HoodConstants.kP);
+    SmartDashboard.putNumber("Hood/kI", Constants.HoodConstants.kI);
+    SmartDashboard.putNumber("Hood/kD", Constants.HoodConstants.kD);
   }
 
   /** Raw absolute encoder value [0, 1). */
@@ -97,6 +102,31 @@ public class HoodSubsystem extends SubsystemBase {
     );
   }
 
+  /**
+   * Set target as a percentage (0.0 = fully closed, 100.0 = fully open).
+   * Maps linearly from kMinHoodRot to kMaxHoodRot.
+   */
+  public void setHoodPercent(double percent) {
+    double clamped = AngleMath.clamp(percent, 0.0, 100.0);
+    double range = Constants.HoodConstants.kMaxHoodRot - Constants.HoodConstants.kMinHoodRot;
+    setHoodRot(Constants.HoodConstants.kMinHoodRot + (clamped / 100.0) * range);
+  }
+
+  /**
+   * Current hood position as a percentage (0.0 = fully closed, 100.0 = fully open).
+   * Useful for dashboard display.
+   */
+  public double getHoodPercent() {
+    double range = Constants.HoodConstants.kMaxHoodRot - Constants.HoodConstants.kMinHoodRot;
+    if (range == 0) return 0.0;
+    return ((getHoodRot() - Constants.HoodConstants.kMinHoodRot) / range) * 100.0;
+  }
+
+  /** True if the through-bore encoder is returning a valid signal. */
+  public boolean isEncoderConnected() {
+    return absEncoder.isConnected();
+  }
+
   public boolean atTarget() {
     return pid.atSetpoint();
   }
@@ -107,8 +137,15 @@ public class HoodSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // Read tunable offset from Elastic
+    // Read tunable offset and PID values from Elastic
     encoderOffset = SmartDashboard.getNumber("Hood/EncoderOffset", encoderOffset);
+
+    double newP = SmartDashboard.getNumber("Hood/kP", Constants.HoodConstants.kP);
+    double newI = SmartDashboard.getNumber("Hood/kI", Constants.HoodConstants.kI);
+    double newD = SmartDashboard.getNumber("Hood/kD", Constants.HoodConstants.kD);
+    if (newP != pid.getP() || newI != pid.getI() || newD != pid.getD()) {
+      pid.setPID(newP, newI, newD);
+    }
 
     double pos = getHoodRot();
 
@@ -117,6 +154,8 @@ public class HoodSubsystem extends SubsystemBase {
     motor.set(out);
 
     // Publish all hood telemetry to Elastic
+    SmartDashboard.putNumber("Hood/PercentOpen", getHoodPercent());
+    SmartDashboard.putBoolean("Hood/EncoderConnected", isEncoderConnected());
     SmartDashboard.putNumber("Hood/HoodAbsoluteEncoder", getAbsoluteEncoder());
     SmartDashboard.putNumber("Hood/HoodAbsoluteEncoderOffseted", getAbsoluteEncoderOffseted());
     SmartDashboard.putNumber("Hood/HoodRotation", getHoodRotation());

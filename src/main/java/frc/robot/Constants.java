@@ -46,7 +46,7 @@ public final class Constants {
     public static final int kHoodNeoVortex = 60;
 
     // Hood angle (NEO 1.1 on Spark Max)
-    public static final int kHoodAngleNeo = 61;
+    public static final int kHoodAngleNeo = 26;
 
     private CanId() {}
   }
@@ -120,7 +120,7 @@ public final class Constants {
     public static final double kVelocityV = 12.0 / 100.0;
     public static final double kVelocityS = 0.0;
 
-    public static final double kReadyRpmTolerance = 100.0;
+    public static final double kReadyRpmTolerance = 120.0;
     public static final double kReadyTimeSeconds = 0.20;
 
     public static final double kToggleTestLowRpm = 2600.0;
@@ -152,8 +152,14 @@ public final class Constants {
      */
     public static final double kEncoderOffsetRot = 0.0;
 
-    public static final double kMinHoodRot = 0.00;
-    public static final double kMaxHoodRot = 0.60;
+    /** Hood fully closed (steepest angle / minimum rotation). */
+    public static final double kClosedHoodRot = 0.00;
+    /** Hood fully open (flattest angle / maximum rotation). */
+    public static final double kOpenHoodRot = 0.60;
+
+    // Aliases used internally for clamping
+    public static final double kMinHoodRot = kClosedHoodRot;
+    public static final double kMaxHoodRot = kOpenHoodRot;
 
     public static final double kP = 6.0;
     public static final double kI = 0.0;
