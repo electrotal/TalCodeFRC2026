@@ -2,11 +2,9 @@ package frc.robot.subsystems;
 
 import com.revrobotics.PersistMode;
 import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkFlex;
-import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.config.SparkBaseConfig;
-import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
@@ -17,20 +15,17 @@ import frc.robot.util.AngleMath;
 
 /**
  * Hood subsystem.
- * Motor: NEO Vortex on Spark Flex (CAN 60), angle motor: NEO 1.1 on Spark Max (CAN 26).
- * Sensor: REV Through-Bore encoder on DIO 3 (duty cycle, 0-1 range).
+ * Motor: NEO 1.1 on Spark Max (CAN 26).
+ * Sensor: REV Through-Bore encoder on DIO 3 (absolute, 0-1 range).
  * Gear ratio 1:2 — encoder rotates twice per one hood rotation.
  *
- * Position scale: 0.0 = fully closed, 1.0 = fully open (percent via setHoodPercent).
+ * Position scale: 0% = fully closed, 100% = fully open.
  */
 public class HoodSubsystem extends SubsystemBase {
 
   // ── Hardware ────────────────────────────────────────────────────────────────
 
-  private final SparkFlex motor =
-      new SparkFlex(Constants.HoodConstants.kHoodMotorCanId, SparkLowLevel.MotorType.kBrushless);
-
-  private final SparkMax angleMotor =
+  private final SparkMax motor =
       new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
 
   private final DutyCycleEncoder encoder =
@@ -53,14 +48,10 @@ public class HoodSubsystem extends SubsystemBase {
   // ─────────────────────────────────────────────────────────────────────────────
 
   public HoodSubsystem() {
-    SparkFlexConfig cfg = new SparkFlexConfig();
+    SparkMaxConfig cfg = new SparkMaxConfig();
     cfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
     cfg.inverted(Constants.MotorInverts.kHoodInverted);
     motor.configure(cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-
-    SparkMaxConfig angleCfg = new SparkMaxConfig();
-    angleCfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
-    angleMotor.configure(angleCfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
 
@@ -117,7 +108,7 @@ public class HoodSubsystem extends SubsystemBase {
 
   /**
    * Set target as a percentage (0 = fully closed, 100 = fully open).
-   * Maps linearly across kClosedHoodRot → kOpenHoodRot.
+   * Maps linearly across kClosedHoodRot to kOpenHoodRot.
    */
   public void setHoodPercent(double percent) {
     double clamped = AngleMath.clamp(percent, 0.0, 100.0);

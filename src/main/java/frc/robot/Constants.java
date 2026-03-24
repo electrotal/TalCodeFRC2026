@@ -42,10 +42,7 @@ public final class Constants {
     // Climber
     public static final int kClimberKraken = 26;
 
-    // Hood (NEO Vortex on Spark Flex)
-    public static final int kHoodNeoVortex = 60;
-
-    // Hood angle (NEO 1.1 on Spark Max)
+    // Hood (NEO 1.1 on Spark Max)
     public static final int kHoodAngleNeo = 26;
 
     private CanId() {}
@@ -139,7 +136,6 @@ public final class Constants {
    * - Your hood will likely use only part of that range.
    */
   public static final class HoodConstants {
-    public static final int kHoodMotorCanId = CanId.kHoodNeoVortex;
     public static final int kThroughBoreDio = 3;
 
     /**
