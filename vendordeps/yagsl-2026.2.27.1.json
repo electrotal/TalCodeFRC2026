@@ -33,12 +33,6 @@
             "errorMessage": "REVLib is required!",
             "offlineFileName": "REVLib.json",
             "onlineUrl": "https://software-metadata.revrobotics.com/REVLib-2026.json"
-        },
-        {
-            "uuid": "60b2694b-9e6e-4026-81ee-6f167946f4b0",
-            "errorMessage": "ThriftyLib is required!",
-            "offlineFileName": "ThriftyLib.json",
-            "onlineUrl": "https://docs.home.thethriftybot.com/ThriftyLib-2026.json"
         }
     ],
     "jniDependencies": [],
