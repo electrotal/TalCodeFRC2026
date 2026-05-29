@@ -48,14 +48,17 @@ public final class ShotMap {
     SmartDashboard.putNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]);
     SmartDashboard.putNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]);
     SmartDashboard.putNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]);
+    SmartDashboard.putNumber("ShotCal/Dist4_M", Constants.ShotLookup.kDistanceM[3]);
 
     SmartDashboard.putNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]);
     SmartDashboard.putNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]);
     SmartDashboard.putNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]);
+    SmartDashboard.putNumber("ShotCal/RPM4", Constants.ShotLookup.kTopRpm[3]);
 
     SmartDashboard.putNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]);
     SmartDashboard.putNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]);
     SmartDashboard.putNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]);
+    SmartDashboard.putNumber("ShotCal/Hood4", Constants.ShotLookup.kHoodRot[3]);
   }
 
   /**
@@ -69,16 +72,19 @@ public final class ShotMap {
         SmartDashboard.getNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]),
         SmartDashboard.getNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]),
         SmartDashboard.getNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]),
+        SmartDashboard.getNumber("ShotCal/Dist4_M", Constants.ShotLookup.kDistanceM[3]),
     };
     double[] rpms = {
         SmartDashboard.getNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]),
         SmartDashboard.getNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]),
         SmartDashboard.getNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]),
+        SmartDashboard.getNumber("ShotCal/RPM4", Constants.ShotLookup.kTopRpm[3]),
     };
     double[] hoods = {
         SmartDashboard.getNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]),
         SmartDashboard.getNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]),
         SmartDashboard.getNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]),
+        SmartDashboard.getNumber("ShotCal/Hood4", Constants.ShotLookup.kHoodRot[3]),
     };
 
     double rpm = LinearInterpolation.lookup(dists, rpms, distanceMeters);

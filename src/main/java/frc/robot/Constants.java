@@ -42,10 +42,7 @@ public final class Constants {
     // Climber
     public static final int kClimberKraken = 26;
 
-    // Hood (NEO Vortex on Spark Flex)
-    public static final int kHoodNeoVortex = 60;
-
-    // Hood angle (NEO 1.1 on Spark Max)
+    // Hood (NEO 1.1 on Spark Max)
     public static final int kHoodAngleNeo = 26;
 
     private CanId() {}
@@ -87,8 +84,8 @@ public final class Constants {
      * Intake target positions in encoder-rotation space after zero offset is applied.
      * These stay valid across reboots because they are referenced to kPivotEncoderZeroOffsetRot.
      */
-    public static final double kClosedPivotRot = 0.54;
-    public static final double kOpenPivotRot = 0.06;
+    public static final double kClosedPivotRot = 0.78;
+    public static final double kOpenPivotRot = 0.39;
 
     public static final double kPivotP = 1.2;
     public static final double kPivotI = 0.0;
@@ -114,7 +111,7 @@ public final class Constants {
     public static final double kMidRpm = 4500.0;
     public static final double kBottomRpm = 4500.0;
 
-    public static final double kVelocityP = 0.18;
+    public static final double kVelocityP = 1.0;
     public static final double kVelocityI = 0.0;
     public static final double kVelocityD = 0.0;
     public static final double kVelocityV = 12.0 / 100.0;
@@ -139,7 +136,6 @@ public final class Constants {
    * - Your hood will likely use only part of that range.
    */
   public static final class HoodConstants {
-    public static final int kHoodMotorCanId = CanId.kHoodNeoVortex;
     public static final int kThroughBoreDio = 3;
 
     /**
@@ -202,17 +198,19 @@ public final class Constants {
    * 165.5 in, hood 0.37, 3650 RPM
    */
   public static final class ShotLookup {
+    // Distances must be in ascending order for interpolation to work correctly
     public static final double[] kDistanceM = {
-        Units.inchesToMeters(52.0),
-        Units.inchesToMeters(114.4),
-        Units.inchesToMeters(165.5)
+        Units.inchesToMeters(52.0),   // ~1.32 m
+        Units.inchesToMeters(114.4),  // ~2.91 m
+        3.80,                         //  3.80 m
+        Units.inchesToMeters(165.5)   // ~4.20 m
     };
 
-    public static final double[] kHoodRot = {0.56, 0.42, 0.37};
+    public static final double[] kHoodRot = {0.56, 0.42, 0.39, 0.37};
 
-    public static final double[] kTopRpm = {2800.0, 3275.0, 3650.0};
-    public static final double[] kMidRpm = {2800.0, 3275.0, 3650.0};
-    public static final double[] kBottomRpm = {2800.0, 3275.0, 3650.0};
+    public static final double[] kTopRpm    = {2800.0, 3275.0, 3900.0, 3650.0};
+    public static final double[] kMidRpm    = {2800.0, 3275.0, 3900.0, 3650.0};
+    public static final double[] kBottomRpm = {2800.0, 3275.0, 3900.0, 3650.0};
 
     private ShotLookup() {}
   }
