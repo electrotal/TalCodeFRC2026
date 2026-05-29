@@ -6,7 +6,7 @@ public final class Constants {
 
   public static final class OperatorConstants {
     public static final int kDriverControllerPort = 0;
-    public static final double DEADBAND = 0.05;
+    public static final double DEADBAND = 0.075;
     private OperatorConstants() {}
   }
 
@@ -71,7 +71,7 @@ public final class Constants {
   }
 
   public static final class IntakeConstants {
-    public static final int kThroughBoreDutyCycleDio = 0;
+    public static final int kThroughBoreDutyCycleDio = 2;
 
     // Pivot rotations per small sprocket rotation
     public static final double kSmallToPivotRatio = 1.0;
@@ -123,8 +123,8 @@ public final class Constants {
     public static final double kReadyRpmTolerance = 120.0;
     public static final double kReadyTimeSeconds = 0.20;
 
-    public static final double kToggleTestLowRpm = 2600.0;
-    public static final double kToggleTestHighRpm = 3900.0;
+    public static final double kToggleTestLowRpm = 2500.0;
+    public static final double kToggleTestHighRpm = 5000.0;
 
     private ShooterConstants() {}
   }

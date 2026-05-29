@@ -18,6 +18,7 @@ import frc.robot.commands.RunTransportWhileHeld;
 import frc.robot.commands.ToggleIntake;
 import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
+import frc.robot.subsystems.Angleshooting;
 import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
@@ -39,6 +40,7 @@ public class RobotContainer {
   private final HoodSubsystem hood = new HoodSubsystem();
   private final ClimberSubsystem climber = new ClimberSubsystem();
   private final VisionSubsystem vision = new VisionSubsystem();
+  private final Angleshooting angleShooting = new Angleshooting();
 
   private final DriverDisplaySubsystem display =
       new DriverDisplaySubsystem(drivebase, shooter, hood, intake, transport, climber, vision);
@@ -180,6 +182,13 @@ public class RobotContainer {
             () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
             climber::stop,
             climber));
+
+            driver.rightTrigger().whileTrue(angleShooting.runMotorCommand(0.5));
+
+        // כאשר לוחצים על ההדק השמאלי (LT) -> המנוע פועל אחורה (לדוגמה: 50%- מהירות)
+        driver.leftTrigger().whileTrue(angleShooting.runMotorCommand(-0.5));
+
+            
   }
 
   public Command getAutonomousCommand() {
