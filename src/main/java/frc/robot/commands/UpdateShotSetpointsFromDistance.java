@@ -20,7 +20,7 @@ public class UpdateShotSetpointsFromDistance extends Command {
   private final ShooterSubsystem shooter;
   private final HoodSubsystem hood;
 
-  public UpdateShotSetpointsFromDistance(SwerveSubsystem swerve, ShooterSubsystem shooter) {
+  public UpdateShotSetpointsFromDistance(SwerveSubsystem swerve, ShooterSubsystem shooter, HoodSubsystem hood) {
     this.swerve = swerve;
     this.shooter = shooter;
     this.hood = hood;

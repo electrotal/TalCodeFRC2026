@@ -19,7 +19,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
 
   private final SwerveSubsystem swerve;
   private final ShooterSubsystem shooter;
-  // private final HoodSubsystem hood;
+  private final HoodSubsystem hood;
   private final IntakeSubsystem intake;
   private final TransportSubsystem transport;
   private final ClimberSubsystem climber;
@@ -28,7 +28,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
   public DriverDisplaySubsystem(
       SwerveSubsystem swerve,
       ShooterSubsystem shooter,
-      // HoodSubsystem hood,
+      HoodSubsystem hood,
       IntakeSubsystem intake,
       TransportSubsystem transport,
       ClimberSubsystem climber,
@@ -36,7 +36,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
   ) {
     this.swerve = swerve;
     this.shooter = shooter;
-    // this.hood = hood;
+    this.hood = hood;
     this.intake = intake;
     this.transport = transport;
     this.climber = climber;
@@ -95,7 +95,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
 
   private void publishHood() {
     SmartDashboard.putNumber("Hood/PosRot", hood.getHoodRot());
-    SmartDashboard.putNumber("Hood/TargetRot", hood.getTargetHoodRot());
+    // SmartDashboard.putNumber("Hood/TargetRot", hood.getTargetHoodRot());
     SmartDashboard.putBoolean("Hood/AtTarget", hood.atTarget());
   }
 
