@@ -138,34 +138,35 @@ public final class Constants {
    */
   public static final class HoodConstants {
     public static final int kThroughBoreDio = 6;
-    public static double kAngleP = 0;
-    public static double kAngleI = 0;
-    public static double kAngleD = 0;
-    /**
-     * If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
-     */
-    public static final double kEncoderToHoodRatio = 1.0;
 
     /**
-     * Encoder zero offset in ENCODER rotations, not hood rotations.
+     * Live-tunable position PID gains (read back from Elastic every loop in
+     * HoodSubsystem.periodic()). These are the starting points for tuning —
+     * adjust them from the dashboard, then lock the dialed-in values here.
+     */
+    public static double kAngleP = 1.0;
+    public static double kAngleI = 0.0;
+    public static double kAngleD = 0.0;
+
+    /**
+     * Encoder zero offset in encoder rotations. The hood reads its position from
+     * the NEO's relative encoder, which starts at 0 every boot, so this is mostly
+     * informational — use HoodSubsystem.zero() to re-zero at runtime.
      */
     public static final double kEncoderOffsetRot = 0.0;
 
-    /** Hood fully closed (steepest angle / minimum rotation). */
-    public static final double kClosedHoodRot = 0.00;
-    /** Hood fully open (flattest angle / maximum rotation). */
-    public static final double kOpenHoodRot = 0.71;
+    /**
+     * Hood operating range in encoder rotations (NEO relative encoder).
+     * The PID setpoint is clamped to this range; setHoodPercent() maps
+     * 0..100 % linearly across it. 0 = fully closed, kMaxPos = fully open.
+     */
+    public static final double kMinPos = 0.0;
+    public static final double kMaxPos = 1.25;
 
-    // Aliases used internally for clamping
-    public static final double kMinHoodRot = kClosedHoodRot;
-    public static final double kMaxHoodRot = kOpenHoodRot;
-
-    public static final double kP = 6.0;
-    public static final double kI = 0.0;
-    public static final double kD = 0.2;
-
-    public static final double kMaxOut = 0.5;
-    public static final double kToleranceHoodRot = 0.005;
+    /** Maximum |motor output| the PID may command (duty cycle, 0..1). */
+    public static double kMaxOut = 0.5;
+    /** Position tolerance (rotations) for atTarget(). */
+    public static final double kToleranceHoodRot = 0.01;
 
     private HoodConstants() {}
   }

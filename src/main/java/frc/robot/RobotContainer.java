@@ -15,6 +15,7 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.DriveFaceVirtualGoal;
 import frc.robot.commands.ResetGyro;
 import frc.robot.commands.RunTransportWhileHeld;
+import frc.robot.commands.SetHoodAngle;
 import frc.robot.commands.ToggleIntake;
 import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
@@ -128,6 +129,12 @@ public class RobotContainer {
             () -> hood.setSpeed(0.05),
             () -> hood.setSpeed(0),
             hood));
+
+    // D-pad Down: closed-loop hood tuning. While held, drives the hood to the
+    // live "Hood/TuneTargetRot" value from Elastic. Sweep that target (and the
+    // Hood/kP,kI,kD gains) on the fly to dial in the angle command.
+    driver.povDown().whileTrue(
+        new SetHoodAngle(hood, () -> SmartDashboard.getNumber("Hood/TuneTargetRot", 0.0)));
 
     // Drive + auto-rotate to hub — translation stays field-oriented, rotation locks on target
     driver.leftStick().toggleOnTrue(
