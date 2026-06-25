@@ -137,6 +137,8 @@ public class HoodSubsystem extends SubsystemBase {
   /** Re-zero: make the current physical position read as kMinPos. */
   public void zero() {
     encoderOffset = getRawEncoder() - Constants.HoodConstants.kMinPos;
+    // Keep the dashboard copy in sync so periodic()'s read-back doesn't undo it.
+    SmartDashboard.putNumber("Hood/EncoderOffset", encoderOffset);
   }
 
   // ── Periodic ─────────────────────────────────────────────────────────────────

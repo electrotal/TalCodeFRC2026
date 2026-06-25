@@ -123,12 +123,17 @@ public class RobotContainer {
             () -> hood.setSpeed(0),
             hood));
 
-    // Right trigger: hood to 5% while held, closes on release
-    driver.rightTrigger().whileTrue(
-        Commands.startEnd(
-            () -> hood.setSpeed(0.05),
-            () -> hood.setSpeed(0),
-            hood));
+    // Right trigger = how far the hood is open: 0 % trigger -> fully closed (0),
+    // 100 % trigger -> fully open (kMaxPos). Runs as the hood's default command so
+    // the hood continuously tracks the trigger whenever nothing else owns it.
+    hood.setDefaultCommand(
+        new SetHoodAngle(hood,
+            () -> driver.getRightTriggerAxis() * Constants.HoodConstants.kMaxPos));
+
+    // Elastic button: click to re-zero the hood encoder (current position -> 0).
+    // ignoringDisable so it works while the robot is disabled.
+    SmartDashboard.putData("Hood/Zero Encoder",
+        Commands.runOnce(hood::zero).ignoringDisable(true).withName("Zero Hood Encoder"));
 
     // D-pad Down: closed-loop hood tuning. While held, drives the hood to the
     // live "Hood/TuneTargetRot" value from Elastic. Sweep that target (and the
