@@ -10,6 +10,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -65,11 +66,15 @@ public class HoodSubsystem extends SubsystemBase {
 
     pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
 
-    // Publish tunables so they show up immediately in Elastic.
-    SmartDashboard.putNumber("Hood/kP",             Constants.HoodConstants.kAngleP);
-    SmartDashboard.putNumber("Hood/kI",             Constants.HoodConstants.kAngleI);
-    SmartDashboard.putNumber("Hood/kD",             Constants.HoodConstants.kAngleD);
-    SmartDashboard.putNumber("Hood/MaxOut",         maxOut);
+    // PID gains + max output: tunable from Elastic's Preferences view AND
+    // persistent across reboots (stored on the roboRIO). initDouble only seeds
+    // the value the first time, so your dialed-in numbers survive a redeploy.
+    Preferences.initDouble("Hood/kP",     Constants.HoodConstants.kAngleP);
+    Preferences.initDouble("Hood/kI",     Constants.HoodConstants.kAngleI);
+    Preferences.initDouble("Hood/kD",     Constants.HoodConstants.kAngleD);
+    Preferences.initDouble("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
+
+    // Transient tunables / inputs (live in SmartDashboard, reset each boot).
     SmartDashboard.putNumber("Hood/EncoderOffset",  encoderOffset);
     SmartDashboard.putNumber("Hood/TuneTargetRot",  targetRot);
   }
@@ -145,14 +150,14 @@ public class HoodSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // Live tuning: pull gains, max output and zero offset back from Elastic.
-    double newP = SmartDashboard.getNumber("Hood/kP", pid.getP());
-    double newI = SmartDashboard.getNumber("Hood/kI", pid.getI());
-    double newD = SmartDashboard.getNumber("Hood/kD", pid.getD());
+    // Live tuning: pull gains + max output from Preferences, zero offset from SmartDashboard.
+    double newP = Preferences.getDouble("Hood/kP", pid.getP());
+    double newI = Preferences.getDouble("Hood/kI", pid.getI());
+    double newD = Preferences.getDouble("Hood/kD", pid.getD());
     if (newP != pid.getP() || newI != pid.getI() || newD != pid.getD()) {
       pid.setPID(newP, newI, newD);
     }
-    maxOut        = SmartDashboard.getNumber("Hood/MaxOut",        maxOut);
+    maxOut        = Preferences.getDouble("Hood/MaxOut", maxOut);
     encoderOffset = SmartDashboard.getNumber("Hood/EncoderOffset", encoderOffset);
 
     if (closedLoopEnabled) {
