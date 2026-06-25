@@ -31,12 +31,15 @@ public class IntakeSubsystem extends SubsystemBase {
   // All position units are encoder rotations after zero offset is applied.
   private double openRot = Constants.IntakeConstants.kOpenPivotRot;
   private double closedRot = Constants.IntakeConstants.kClosedPivotRot;
+  private double clopenRot = Constants.IntakeConstants.kClopenPivotRot;
+
   private double targetRot = closedRot;
 
   private boolean open = false;
 
   private double rollerPercent = Constants.IntakeConstants.kRollerPercent;
   private boolean pivotHoldEnabled = true;
+  private boolean clopenHoldEnabled = false;
 
   private double maxOut = Constants.IntakeConstants.kPivotMaxOut;
   private double toleranceRot = Constants.IntakeConstants.kPivotToleranceRot;
@@ -59,6 +62,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     SmartDashboard.putNumber("Intake/OpenRot", openRot);
     SmartDashboard.putNumber("Intake/ClosedRot", closedRot);
+    SmartDashboard.putNumber("Intake/ClopenRot", clopenRot);
     SmartDashboard.putNumber("Intake/TargetRot", targetRot);
     SmartDashboard.putNumber("Intake/RollerPercent", rollerPercent);
     SmartDashboard.putNumber("Intake/MaxOut", maxOut);
@@ -101,6 +105,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public boolean isOpen() {
     return open;
+  }
+
+  public boolean isClopen() {
+    return clopenHoldEnabled;
   }
 
   public boolean isPivotHoldEnabled() {
@@ -167,14 +175,23 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void open() {
     open = true;
+    clopenHoldEnabled = false;
     setPivotTargetRot(openRot);
     setRollerPercent(rollerPercent);
   }
 
   public void close() {
     open = false;
+    clopenHoldEnabled = false;
     stopRoller();
     setPivotTargetRot(closedRot);
+  }
+
+  public void clopen() {
+    open = false;
+    clopenHoldEnabled = true;
+    stopRoller();
+    setPivotTargetRot(clopenRot);
   }
 
   public void toggle() {
@@ -203,6 +220,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     openRot = wrap01(SmartDashboard.getNumber("Intake/OpenRot", openRot));
     closedRot = wrap01(SmartDashboard.getNumber("Intake/ClosedRot", closedRot));
+    clopenRot = wrap01(SmartDashboard.getNumber("Intake/ClopenRot", clopenRot));
     targetRot = wrap01(SmartDashboard.getNumber("Intake/TargetRot", targetRot));
 
     rollerPercent = SmartDashboard.getNumber("Intake/RollerPercent", rollerPercent);
@@ -217,7 +235,7 @@ public class IntakeSubsystem extends SubsystemBase {
   public void periodic() {
     updateTunablesFromNT();
 
-    SmartDashboard.putString("Intake/State", open ? "Open" : "Closed");
+    SmartDashboard.putString("Intake/State", open ? "Open" : clopenHoldEnabled ? "Clopen" : "Closed");
     SmartDashboard.putBoolean("Intake/EncoderConnected", throughBore.isConnected());
     SmartDashboard.putNumber("Intake/Abs01", getAbs01());
     SmartDashboard.putNumber("Intake/Rel01", getRel01());
@@ -230,6 +248,7 @@ public class IntakeSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Intake/PivotMotorRotorVelRps", getPivotMotorRotorVelRps());
     SmartDashboard.putNumber("Intake/RollerMotorRotorVelRps", getRollerMotorRotorVelRps());
     SmartDashboard.putBoolean("Intake/Open", open);
+    SmartDashboard.putBoolean("Intake/Clopen", clopenHoldEnabled);
     SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
 
     if (!pivotHoldEnabled) {

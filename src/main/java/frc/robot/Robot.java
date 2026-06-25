@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -11,6 +12,9 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
 
 /**
  * The methods in this class are called automatically corresponding to each mode, as described in
@@ -19,6 +23,8 @@ import java.time.format.DateTimeFormatter;
  */
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
+  // private final DutyCycleEncoder encoder;
+  // private final SparkMax motor = new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
 
   private final RobotContainer m_robotContainer;
 
@@ -26,10 +32,14 @@ public class Robot extends TimedRobot {
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
-  public Robot() {
+  
+   public Robot() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
+
+    // encoder = new DutyCycleEncoder(6);
+    
 
     String buildTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     SmartDashboard.putString("Build/Version", "Tal-Main");
@@ -88,7 +98,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
   public void testInit() {

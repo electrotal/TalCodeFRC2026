@@ -22,7 +22,6 @@ public class DriverDisplaySubsystem extends SubsystemBase {
   private final HoodSubsystem hood;
   private final IntakeSubsystem intake;
   private final TransportSubsystem transport;
-  private final ClimberSubsystem climber;
   private final VisionSubsystem vision;
 
   public DriverDisplaySubsystem(
@@ -31,7 +30,6 @@ public class DriverDisplaySubsystem extends SubsystemBase {
       HoodSubsystem hood,
       IntakeSubsystem intake,
       TransportSubsystem transport,
-      ClimberSubsystem climber,
       VisionSubsystem vision
   ) {
     this.swerve = swerve;
@@ -39,7 +37,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
     this.hood = hood;
     this.intake = intake;
     this.transport = transport;
-    this.climber = climber;
+    // this.climber = climber;
     this.vision = vision;
   }
 
@@ -96,7 +94,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
   private void publishHood() {
     SmartDashboard.putNumber("Hood/PosRot", hood.getHoodRot());
     // SmartDashboard.putNumber("Hood/TargetRot", hood.getTargetHoodRot());
-    SmartDashboard.putBoolean("Hood/AtTarget", hood.atTarget());
+    // SmartDashboard.putBoolean("Hood/AtTarget", hood.atTarget());
   }
 
   private void publishIntake() {
@@ -127,9 +125,9 @@ public class DriverDisplaySubsystem extends SubsystemBase {
   }
 
   private void publishClimber() {
-    SmartDashboard.putNumber("Climber/CmdPct", climber.getLastPercent());
-    SmartDashboard.putNumber("Climber/RotorPosRot", climber.getRotorPosRot());
-    SmartDashboard.putNumber("Climber/RotorVelRps", climber.getRotorVelRps());
+    // SmartDashboard.putNumber("Climber/CmdPct", climber.getLastPercent());
+    // SmartDashboard.putNumber("Climber/RotorPosRot", climber.getRotorPosRot());
+    // SmartDashboard.putNumber("Climber/RotorVelRps", climber.getRotorVelRps());
   }
 
   private void publishVisionBasics() {

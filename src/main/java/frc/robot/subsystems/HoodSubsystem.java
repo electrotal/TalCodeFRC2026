@@ -1,17 +1,19 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.PersistMode;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkLowLevel;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.util.AngleMath;
+import frc.robot.util.MultiTurnAbsoluteEncoder;
 
 /**
  * Hood subsystem.
@@ -25,25 +27,20 @@ public class HoodSubsystem extends SubsystemBase {
 
   // ── Hardware ────────────────────────────────────────────────────────────────
 
+  private final PIDController HoodPid =
+      new PIDController(
+          Constants.HoodConstants.kAngleP,
+          Constants.HoodConstants.kAngleI,
+          Constants.HoodConstants.kAngleD);
+
   private final SparkMax motor =
       new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
 
-  private final DutyCycleEncoder encoder =
-      new DutyCycleEncoder(Constants.HoodConstants.kThroughBoreDio);
+  private final RelativeEncoder encoder;
 
-  // ── Control ─────────────────────────────────────────────────────────────────
-
-  private final PIDController pid =
-      new PIDController(Constants.HoodConstants.kP, Constants.HoodConstants.kI, Constants.HoodConstants.kD);
-
-  // ── Tunable state (read back from Elastic every loop) ───────────────────────
+  // ── Tunable state ────────────────────────────────────────────────────────────
 
   private double encoderOffset = Constants.HoodConstants.kEncoderOffsetRot;
-  private double maxOut        = Constants.HoodConstants.kMaxOut;
-
-  // ── Setpoint ─────────────────────────────────────────────────────────────────
-
-  private double targetHoodRot = Constants.HoodConstants.kMinHoodRot;
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -52,30 +49,24 @@ public class HoodSubsystem extends SubsystemBase {
     cfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
     cfg.inverted(Constants.MotorInverts.kHoodInverted);
     motor.configure(cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    encoder = motor.getEncoder();
 
-    pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
-
-    // Publish tunable values so they show up immediately in Elastic
     SmartDashboard.putNumber("Hood/EncoderOffset", encoderOffset);
-    SmartDashboard.putNumber("Hood/MaxOut",         maxOut);
-    SmartDashboard.putNumber("Hood/kP",             Constants.HoodConstants.kP);
-    SmartDashboard.putNumber("Hood/kI",             Constants.HoodConstants.kI);
-    SmartDashboard.putNumber("Hood/kD",             Constants.HoodConstants.kD);
   }
 
   // ── Getters ──────────────────────────────────────────────────────────────────
 
-  /** Raw encoder value [0, 1). */
+  /** Raw continuous encoder value (multi-turn, can exceed 1.0 or be negative). */
   public double getRawEncoder() {
-    return encoder.get();
-  }
+    return encoder.getPosition();
+    }
 
-  /** Encoder value with offset applied. */
+  /** Continuous encoder value with offset applied. */
   public double getOffsetEncoder() {
     return getRawEncoder() - encoderOffset;
   }
 
-  /** Hood position in rotations (gear ratio 1:2). */
+  /** Hood position in rotations (gear ratio 1:2 — encoder does 2 turns per 1 hood turn). */
   public double getHoodRot() {
     return getOffsetEncoder() / 2.0;
   }
@@ -87,33 +78,11 @@ public class HoodSubsystem extends SubsystemBase {
     return ((getHoodRot() - Constants.HoodConstants.kMinHoodRot) / range) * 100.0;
   }
 
-  /** True if the through-bore encoder has a valid signal. */
-  public boolean isEncoderConnected() {
-    return encoder.isConnected();
-  }
-
-  public boolean atTarget() {
-    return pid.atSetpoint();
-  }
 
   // ── Setters ──────────────────────────────────────────────────────────────────
 
-  /** Set target in hood rotations. Clamped to closed/open range. */
-  public void setHoodRot(double hoodRot) {
-    targetHoodRot = AngleMath.clamp(
-        hoodRot,
-        Constants.HoodConstants.kMinHoodRot,
-        Constants.HoodConstants.kMaxHoodRot);
-  }
-
-  /**
-   * Set target as a percentage (0 = fully closed, 100 = fully open).
-   * Maps linearly across kClosedHoodRot to kOpenHoodRot.
-   */
-  public void setHoodPercent(double percent) {
-    double clamped = AngleMath.clamp(percent, 0.0, 100.0);
-    double range   = Constants.HoodConstants.kMaxHoodRot - Constants.HoodConstants.kMinHoodRot;
-    setHoodRot(Constants.HoodConstants.kMinHoodRot + (clamped / 100.0) * range);
+  public void setSpeed(double speed) {
+    motor.set(speed);
   }
 
   public void stop() {
@@ -124,29 +93,13 @@ public class HoodSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // Read tunable values from Elastic
-    encoderOffset = SmartDashboard.getNumber("Hood/EncoderOffset", encoderOffset);
-    maxOut        = SmartDashboard.getNumber("Hood/MaxOut",         maxOut);
-
-    double newP = SmartDashboard.getNumber("Hood/kP", Constants.HoodConstants.kP);
-    double newI = SmartDashboard.getNumber("Hood/kI", Constants.HoodConstants.kI);
-    double newD = SmartDashboard.getNumber("Hood/kD", Constants.HoodConstants.kD);
-    if (newP != pid.getP() || newI != pid.getI() || newD != pid.getD()) {
-      pid.setPID(newP, newI, newD);
-    }
-
-    // Run PID
-    double out = pid.calculate(getHoodRot(), targetHoodRot);
-    out = AngleMath.clamp(out, -maxOut, maxOut);
-    motor.set(out);
-
-    // Telemetry
-    SmartDashboard.putNumber("Hood/PercentOpen",       getHoodPercent());
-    SmartDashboard.putBoolean("Hood/EncoderConnected", isEncoderConnected());
+    System.out.println(getRawEncoder());
     SmartDashboard.putNumber("Hood/RawEncoder",        getRawEncoder());
     SmartDashboard.putNumber("Hood/OffsetEncoder",     getOffsetEncoder());
-    SmartDashboard.putNumber("Hood/RotationRot",       getHoodRot());
-    SmartDashboard.putNumber("Hood/TargetRot",         targetHoodRot);
-    SmartDashboard.putBoolean("Hood/AtTarget",         atTarget());
+    SmartDashboard.putNumber("Hood/HoodRot",           getHoodRot());
+    SmartDashboard.putNumber("Hood/PercentOpen",       getHoodPercent());
+    SmartDashboard.putNumber("Hood/P", HoodPid.getP());
+    SmartDashboard.putNumber("Hood/I", HoodPid.getI());
+    SmartDashboard.putNumber("Hood/D", HoodPid.getD());
   }
 }

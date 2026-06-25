@@ -32,7 +32,7 @@ public class UpdateShotSetpointsFromDistance extends Command {
     double distanceMeters = FieldTargetUtil.distanceToHubMeters(swerve.getPose());
     ShotMap.ShotSolution shot = ShotMap.calculate(distanceMeters);
 
-    hood.setHoodRot(shot.hoodRot());
+    // hood.setHoodRot(shot.hoodRot());
     shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
 
     SmartDashboard.putNumber("Shot/DistanceMeters", distanceMeters);

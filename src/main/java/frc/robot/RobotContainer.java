@@ -18,8 +18,8 @@ import frc.robot.commands.RunTransportWhileHeld;
 import frc.robot.commands.ToggleIntake;
 import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
-import frc.robot.subsystems.Angleshooting;
-import frc.robot.subsystems.ClimberSubsystem;
+// import frc.robot.subsystems.Angleshooting;
+// import frc.robot.subsystems.ClimberSubsystem;
 import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
@@ -38,16 +38,17 @@ public class RobotContainer {
   private final TransportSubsystem transport = new TransportSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem();
   private final HoodSubsystem hood = new HoodSubsystem();
-  private final ClimberSubsystem climber = new ClimberSubsystem();
+//   private final ClimberSubsystem climber = new ClimberSubsystem();
   private final VisionSubsystem vision = new VisionSubsystem();
-  private final Angleshooting angleShooting = new Angleshooting();
+//   private final Angleshooting angleShooting = new Angleshooting();
+
 
   private final DriverDisplaySubsystem display =
-      new DriverDisplaySubsystem(drivebase, shooter, hood, intake, transport, climber, vision);
+      new DriverDisplaySubsystem(drivebase, shooter, hood, intake, transport, vision);
 
   private final VisionFusionSubsystem visionFusion = new VisionFusionSubsystem(drivebase, vision);
 
-  private final CommandXboxController driver =
+  public final CommandXboxController driver =
       new CommandXboxController(OperatorConstants.kDriverControllerPort);
 
   private final SendableChooser<Command> autoChooser;
@@ -68,7 +69,7 @@ public class RobotContainer {
   public RobotContainer() {
     CommandScheduler.getInstance().registerSubsystem(display, visionFusion);
 
-    AutoNamedCommands.register(drivebase, shooter, transport, intake, climber);
+    AutoNamedCommands.register(drivebase, shooter, transport, intake);
 
     autoChooser = Autos.buildChooser();
     SmartDashboard.putData("Auto Chooser", autoChooser);
@@ -100,9 +101,10 @@ public class RobotContainer {
 
     driver.rightBumper().onTrue(new ToggleIntake(intake));
     driver.leftBumper().onTrue(Commands.runOnce(intake::togglePivotHoldEnabled));
+    driver.y().onTrue(Commands.runOnce(intake::clopen, intake));
 
     // Shooter wheel test toggles — RPMs tunable live via SmartDashboard/Elastic
-    driver.y().toggleOnTrue(createShooterToggleCommand(shooter::getLiveLowRpm));
+    
     driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
 
     // A: run transport in reverse while held
@@ -113,18 +115,18 @@ public class RobotContainer {
             transport));
 
 
-    // Left trigger: hood to 90% while held, closes on release
+    // Left trigger: hood to -5% while held, closes on release
     driver.leftTrigger().whileTrue(
         Commands.startEnd(
-            () -> hood.setHoodPercent(90),
-            () -> hood.setHoodPercent(0),
+            () -> hood.setSpeed(-0.05),
+            () -> hood.setSpeed(0),
             hood));
 
-    // Right trigger: hood to 15% while held, closes on release
+    // Right trigger: hood to 5% while held, closes on release
     driver.rightTrigger().whileTrue(
         Commands.startEnd(
-            () -> hood.setHoodPercent(15),
-            () -> hood.setHoodPercent(0),
+            () -> hood.setSpeed(0.05),
+            () -> hood.setSpeed(0),
             hood));
 
     // Drive + auto-rotate to hub — translation stays field-oriented, rotation locks on target
@@ -171,22 +173,22 @@ public class RobotContainer {
     driver.povDown().onTrue(Commands.runOnce(shooter::stop, shooter));
 
     // D-pad Left: toggle climber down
-    driver.povLeft().toggleOnTrue(
-        Commands.startEnd(
-            () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
-            climber::stop,
-            climber));
-    // D-pad Right: toggle climber up
-    driver.povRight().toggleOnTrue(
-        Commands.startEnd(
-            () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
-            climber::stop,
-            climber));
+    // driver.povLeft().toggleOnTrue(
+    //     Commands.startEnd(
+    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
+    //         climber::stop,
+    //         climber));
+    // // D-pad Right: toggle climber up
+    // driver.povRight().toggleOnTrue(
+    //     Commands.startEnd(
+    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
+    //         climber::stop,
+    //         climber));
 
-            driver.rightTrigger().whileTrue(angleShooting.runMotorCommand(0.5));
+            // driver.rightTrigger().whileTrue(angleShooting.runMotorCommand(0.5));
 
         // כאשר לוחצים על ההדק השמאלי (LT) -> המנוע פועל אחורה (לדוגמה: 50%- מהירות)
-        driver.leftTrigger().whileTrue(angleShooting.runMotorCommand(-0.5));
+        // driver.leftTrigger().whileTrue(angleShooting.runMotorCommand(-0.5));
 
             
   }

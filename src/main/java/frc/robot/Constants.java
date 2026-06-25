@@ -6,7 +6,7 @@ public final class Constants {
 
   public static final class OperatorConstants {
     public static final int kDriverControllerPort = 0;
-    public static final double DEADBAND = 0.075;
+    public static final double DEADBAND = 0.175;
     private OperatorConstants() {}
   }
 
@@ -85,7 +85,8 @@ public final class Constants {
      * These stay valid across reboots because they are referenced to kPivotEncoderZeroOffsetRot.
      */
     public static final double kClosedPivotRot = 0.78;
-    public static final double kOpenPivotRot = 0.39;
+    public static final double kOpenPivotRot = 0.36;
+    public static final double kClopenPivotRot = 0.55;
 
     public static final double kPivotP = 1.2;
     public static final double kPivotI = 0.0;
@@ -136,8 +137,10 @@ public final class Constants {
    * - Your hood will likely use only part of that range.
    */
   public static final class HoodConstants {
-    public static final int kThroughBoreDio = 3;
-
+    public static final int kThroughBoreDio = 6;
+    public static double kAngleP = 0;
+    public static double kAngleI = 0;
+    public static double kAngleD = 0;
     /**
      * If the encoder is geared, set how many HOOD rotations happen per 1 encoder rotation.
      */
@@ -151,7 +154,7 @@ public final class Constants {
     /** Hood fully closed (steepest angle / minimum rotation). */
     public static final double kClosedHoodRot = 0.00;
     /** Hood fully open (flattest angle / maximum rotation). */
-    public static final double kOpenHoodRot = 0.60;
+    public static final double kOpenHoodRot = 0.71;
 
     // Aliases used internally for clamping
     public static final double kMinHoodRot = kClosedHoodRot;
@@ -174,6 +177,8 @@ public final class Constants {
     public static final double kJerkReversePercent = -0.35;
     public static final double kJerkForwardSeconds = 0.25;
     public static final double kJerkReverseSeconds = 0.10;
+    public static final double kHoodRangeMin = 0;
+    public static final double kHoodRangeMax = 1.25;
 
     private FeedConstants() {}
   }
