@@ -114,12 +114,12 @@ public class TransportSubsystem extends SubsystemBase {
     liveFeederPercent    = SmartDashboard.getNumber("Transport/FeederPercent",    liveFeederPercent);
 
     // Diagnostics — use these in Elastic to debug the motor
-    SmartDashboard.putNumber("Transport/MainCmdPct",    lastMainPercent);
-    SmartDashboard.putNumber("Transport/FeederCmdPct",  lastFeederPercent);
-    SmartDashboard.putNumber("Transport/MainVelRps",    getMainRotorVelRps());
-    SmartDashboard.putNumber("Transport/FeederVelRps",  getFeederRotorVelRps());
-    SmartDashboard.putNumber("Transport/MainStatorA",   mainConveyor.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Transport/FeederStatorA", shooterFeeder.getStatorCurrent().getValueAsDouble());
-    SmartDashboard.putNumber("Transport/MainSupplyV",   mainConveyor.getSupplyVoltage().getValueAsDouble());
+    // SmartDashboard.putNumber("Transport/MainCmdPct",    lastMainPercent);
+    // SmartDashboard.putNumber("Transport/FeederCmdPct",  lastFeederPercent);
+    // SmartDashboard.putNumber("Transport/MainVelRps",    getMainRotorVelRps());
+    // SmartDashboard.putNumber("Transport/FeederVelRps",  getFeederRotorVelRps());
+    // SmartDashboard.putNumber("Transport/MainStatorA",   mainConveyor.getStatorCurrent().getValueAsDouble());
+    // SmartDashboard.putNumber("Transport/FeederStatorA", shooterFeeder.getStatorCurrent().getValueAsDouble());
+    // SmartDashboard.putNumber("Transport/MainSupplyV",   mainConveyor.getSupplyVoltage().getValueAsDouble());
   }
 }

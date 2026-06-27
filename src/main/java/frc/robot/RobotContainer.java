@@ -20,7 +20,7 @@ import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
 // import frc.robot.subsystems.Angleshooting;
 // import frc.robot.subsystems.ClimberSubsystem;
-import frc.robot.subsystems.DriverDisplaySubsystem;
+// import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
@@ -43,13 +43,15 @@ public class RobotContainer {
 //   private final Angleshooting angleShooting = new Angleshooting();
 
 
-  private final DriverDisplaySubsystem display =
-      new DriverDisplaySubsystem(drivebase, shooter, hood, intake, transport, vision);
+  // private final  display =
+  //     new DriverDDriverDisplaySubsystemisplaySubsystem(drivebase, shooter, hood, intake, transport, vision);
 
   private final VisionFusionSubsystem visionFusion = new VisionFusionSubsystem(drivebase, vision);
 
   public final CommandXboxController driver =
       new CommandXboxController(OperatorConstants.kDriverControllerPort);
+  public final CommandXboxController NPC =
+      new CommandXboxController(OperatorConstants.kNPCControllerPort);
 
   private final SendableChooser<Command> autoChooser;
 
@@ -67,7 +69,7 @@ public class RobotContainer {
       drivebase.driveFieldOriented(driveAngularVelocity);
 
   public RobotContainer() {
-    CommandScheduler.getInstance().registerSubsystem(display, visionFusion);
+    CommandScheduler.getInstance().registerSubsystem(visionFusion);
 
     AutoNamedCommands.register(drivebase, shooter, transport, intake);
 
@@ -107,6 +109,12 @@ public class RobotContainer {
     
     driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
 
+    // driver.b().whileTrue(
+    //   Commands.runEnd(
+    //     () -> hood.setHoodPercent(10),
+    //     () -> hood.setHoodPercent(0.1),
+    //     hood)   );
+
     // A: run transport in reverse while held
     driver.a().whileTrue(
         Commands.runEnd(
@@ -118,14 +126,14 @@ public class RobotContainer {
     // Left trigger: hood to -5% while held, closes on release
     driver.leftTrigger().whileTrue(
         Commands.startEnd(
-            () -> hood.setSpeed(-0.05),
+            () -> hood.setSpeed(-0.15),
             () -> hood.setSpeed(0),
             hood));
 
     // Right trigger: hood to 5% while held, closes on release
-    driver.rightTrigger().whileTrue(
+    NPC.rightTrigger().whileTrue(
         Commands.startEnd(
-            () -> hood.setSpeed(0.05),
+            () -> hood.setSpeed(0.15),
             () -> hood.setSpeed(0),
             hood));
 

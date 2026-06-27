@@ -86,6 +86,6 @@ public class VisionFusionSubsystem extends SubsystemBase {
     }
 
     swerve.addVisionMeasurement(meas.pose, meas.timestampSeconds);
-    SmartDashboard.putString("Vision/Fusion/RejectReason", "ACCEPTED");
+    // SmartDashboard.putString("Vision/Fusion/RejectReason", "ACCEPTED");
   }
 }

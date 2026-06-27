@@ -21,6 +21,5 @@ public class ActuatorSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         // מדפיס לדיבאג כדי שנראה איזה פקודה הסרבו מקבל עכשיו
-        SmartDashboard.putNumber("Servo Command", myServo.get());
     }
 }

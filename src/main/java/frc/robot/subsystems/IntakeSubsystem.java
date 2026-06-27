@@ -56,19 +56,19 @@ public class IntakeSubsystem extends SubsystemBase {
 
     pivotPid.setTolerance(toleranceRot);
 
-    SmartDashboard.putNumber("Intake/P", pivotPid.getP());
-    SmartDashboard.putNumber("Intake/I", pivotPid.getI());
-    SmartDashboard.putNumber("Intake/D", pivotPid.getD());
+    // SmartDashboard.putNumber("Intake/P", pivotPid.getP());
+    // SmartDashboard.putNumber("Intake/I", pivotPid.getI());
+    // SmartDashboard.putNumber("Intake/D", pivotPid.getD());
 
-    SmartDashboard.putNumber("Intake/OpenRot", openRot);
-    SmartDashboard.putNumber("Intake/ClosedRot", closedRot);
-    SmartDashboard.putNumber("Intake/ClopenRot", clopenRot);
-    SmartDashboard.putNumber("Intake/TargetRot", targetRot);
-    SmartDashboard.putNumber("Intake/RollerPercent", rollerPercent);
-    SmartDashboard.putNumber("Intake/MaxOut", maxOut);
-    SmartDashboard.putNumber("Intake/ToleranceRot", toleranceRot);
-    SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
-    SmartDashboard.putNumber("Intake/ZeroOffsetRot", Constants.IntakeConstants.kPivotEncoderZeroOffsetRot);
+    // SmartDashboard.putNumber("Intake/OpenRot", openRot);
+    // SmartDashboard.putNumber("Intake/ClosedRot", closedRot);
+    // SmartDashboard.putNumber("Intake/ClopenRot", clopenRot);
+    // SmartDashboard.putNumber("Intake/TargetRot", targetRot);
+    // SmartDashboard.putNumber("Intake/RollerPercent", rollerPercent);
+    // SmartDashboard.putNumber("Intake/MaxOut", maxOut);
+    // SmartDashboard.putNumber("Intake/ToleranceRot", toleranceRot);
+    // SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
+    // SmartDashboard.putNumber("Intake/ZeroOffsetRot", Constants.IntakeConstants.kPivotEncoderZeroOffsetRot);
   }
 
   private static void configureMotor(TalonFX motor, NeutralModeValue neutralMode, boolean invert) {
@@ -117,7 +117,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void setPivotHoldEnabled(boolean enabled) {
     pivotHoldEnabled = enabled;
-    SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
+    // SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
     if (!enabled) {
       lastPivotPercent = 0.0;
       pivotMotor.setControl(pivotOut.withOutput(0.0));
@@ -130,7 +130,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public void setPivotTargetRot(double rot) {
     targetRot = wrap01(rot);
-    SmartDashboard.putNumber("Intake/TargetRot", targetRot);
+    // SmartDashboard.putNumber("Intake/TargetRot", targetRot);
   }
 
   public double getPivotTargetRot() {
@@ -213,10 +213,10 @@ public class IntakeSubsystem extends SubsystemBase {
   }
 
   private void updateTunablesFromNT() {
-    double p = SmartDashboard.getNumber("Intake/P", pivotPid.getP());
-    double i = SmartDashboard.getNumber("Intake/I", pivotPid.getI());
-    double d = SmartDashboard.getNumber("Intake/D", pivotPid.getD());
-    pivotPid.setPID(p, i, d);
+    // double p = SmartDashboard.getNumber("Intake/P", pivotPid.getP());
+    // double i = SmartDashboard.getNumber("Intake/I", pivotPid.getI());
+    // double d = SmartDashboard.getNumber("Intake/D", pivotPid.getD());
+    // pivotPid.setPID(p, i, d);
 
     openRot = wrap01(SmartDashboard.getNumber("Intake/OpenRot", openRot));
     closedRot = wrap01(SmartDashboard.getNumber("Intake/ClosedRot", closedRot));
@@ -228,28 +228,28 @@ public class IntakeSubsystem extends SubsystemBase {
     toleranceRot = SmartDashboard.getNumber("Intake/ToleranceRot", toleranceRot);
     pivotPid.setTolerance(toleranceRot);
 
-    pivotHoldEnabled = SmartDashboard.getBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
+    // pivotHoldEnabled = SmartDashboard.getBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
   }
 
   @Override
   public void periodic() {
     updateTunablesFromNT();
 
-    SmartDashboard.putString("Intake/State", open ? "Open" : clopenHoldEnabled ? "Clopen" : "Closed");
-    SmartDashboard.putBoolean("Intake/EncoderConnected", throughBore.isConnected());
-    SmartDashboard.putNumber("Intake/Abs01", getAbs01());
-    SmartDashboard.putNumber("Intake/Rel01", getRel01());
-    SmartDashboard.putNumber("Intake/MeasRot", getMeasuredRot());
-    SmartDashboard.putNumber("Intake/ErrRot", getPivotErrorRot());
-    SmartDashboard.putNumber("Intake/ThroughBoreContRot", getThroughBoreContinuousRot());
-    SmartDashboard.putNumber("Intake/PivotCmdPct", lastPivotPercent);
-    SmartDashboard.putNumber("Intake/RollerCmdPct", lastRollerPercent);
-    SmartDashboard.putNumber("Intake/PivotMotorRotorPosRot", getPivotMotorRotorPosRot());
-    SmartDashboard.putNumber("Intake/PivotMotorRotorVelRps", getPivotMotorRotorVelRps());
-    SmartDashboard.putNumber("Intake/RollerMotorRotorVelRps", getRollerMotorRotorVelRps());
-    SmartDashboard.putBoolean("Intake/Open", open);
-    SmartDashboard.putBoolean("Intake/Clopen", clopenHoldEnabled);
-    SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
+    // SmartDashboard.putString("Intake/State", open ? "Open" : clopenHoldEnabled ? "Clopen" : "Closed");
+    // SmartDashboard.putBoolean("Intake/EncoderConnected", throughBore.isConnected());
+    // SmartDashboard.putNumber("Intake/Abs01", getAbs01());
+    // SmartDashboard.putNumber("Intake/Rel01", getRel01());
+    // SmartDashboard.putNumber("Intake/MeasRot", getMeasuredRot());
+    // SmartDashboard.putNumber("Intake/ErrRot", getPivotErrorRot());
+    // SmartDashboard.putNumber("Intake/ThroughBoreContRot", getThroughBoreContinuousRot());
+    // SmartDashboard.putNumber("Intake/PivotCmdPct", lastPivotPercent);
+    // SmartDashboard.putNumber("Intake/RollerCmdPct", lastRollerPercent);
+    // SmartDashboard.putNumber("Intake/PivotMotorRotorPosRot", getPivotMotorRotorPosRot());
+    // SmartDashboard.putNumber("Intake/PivotMotorRotorVelRps", getPivotMotorRotorVelRps());
+    // SmartDashboard.putNumber("Intake/RollerMotorRotorVelRps", getRollerMotorRotorVelRps());
+    // SmartDashboard.putBoolean("Intake/Open", open);
+    // SmartDashboard.putBoolean("Intake/Clopen", clopenHoldEnabled);
+    // SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
 
     if (!pivotHoldEnabled) {
       lastPivotPercent = 0.0;

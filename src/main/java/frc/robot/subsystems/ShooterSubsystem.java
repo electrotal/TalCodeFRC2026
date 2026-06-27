@@ -213,13 +213,13 @@ public class ShooterSubsystem extends SubsystemBase {
       applyVelocityTargets();
     }
 
-    SmartDashboard.putBoolean("Shooter/VelocityModeEnabled", velocityControlEnabled);
-    SmartDashboard.putBoolean("Shooter/Ready", isAtSpeed());
-    SmartDashboard.putNumber("Shooter/TopRPM", getTopRpm());
-    SmartDashboard.putNumber("Shooter/MidRPM", getMidRpm());
-    SmartDashboard.putNumber("Shooter/BottomRPM", getBottomRpm());
-    SmartDashboard.putNumber("Shooter/TargetTopRPM", targetTopRpm);
-    SmartDashboard.putNumber("Shooter/TargetMidRPM", targetMidRpm);
-    SmartDashboard.putNumber("Shooter/TargetBottomRPM", targetBottomRpm);
+    // SmartDashboard.putBoolean("Shooter/VelocityModeEnabled", velocityControlEnabled);
+    // SmartDashboard.putBoolean("Shooter/Ready", isAtSpeed());
+    // SmartDashboard.putNumber("Shooter/TopRPM", getTopRpm());
+    // SmartDashboard.putNumber("Shooter/MidRPM", getMidRpm());
+    // SmartDashboard.putNumber("Shooter/BottomRPM", getBottomRpm());
+    // SmartDashboard.putNumber("Shooter/TargetTopRPM", targetTopRpm);
+    // SmartDashboard.putNumber("Shooter/TargetMidRPM", targetMidRpm);
+    // SmartDashboard.putNumber("Shooter/TargetBottomRPM", targetBottomRpm);
   }
 }
