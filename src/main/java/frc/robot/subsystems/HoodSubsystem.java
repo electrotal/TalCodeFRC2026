@@ -80,6 +80,10 @@ public class HoodSubsystem extends SubsystemBase {
 
     SmartDashboard.putNumber("Hood/EncoderOffset", offset);
     SmartDashboard.putBoolean("Hood/ZeroNow", false);
+    // Bench/Elastic angle command: type a target into Hood/TuneTargetRot, flip Hood/GoToTune on,
+    // and the hood PIDs there — tune gains and drive to any set angle without a tag in view.
+    SmartDashboard.putNumber("Hood/TuneTargetRot", targetHoodRot);
+    SmartDashboard.putBoolean("Hood/GoToTune", false);
   }
 
   // ── Position ─────────────────────────────────────────────────────────────────
@@ -178,6 +182,11 @@ public class HoodSubsystem extends SubsystemBase {
     if (SmartDashboard.getBoolean("Hood/ZeroNow", false)) {
       zeroAtCurrent();
       SmartDashboard.putBoolean("Hood/ZeroNow", false);
+    }
+
+    // Dashboard angle command: drive the hood to any angle typed on Elastic (calibration / tuning).
+    if (SmartDashboard.getBoolean("Hood/GoToTune", false)) {
+      setHoodRot(SmartDashboard.getNumber("Hood/TuneTargetRot", targetHoodRot));
     }
 
     SmartDashboard.putNumber("Hood/HoodRot", getHoodRot());
