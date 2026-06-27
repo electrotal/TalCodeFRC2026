@@ -141,9 +141,9 @@ public class RobotContainer {
 
     // LT/RT: manual hood jog — for calibration (drive to the closed stop to zero, find the open limit).
     driver.leftTrigger().whileTrue(
-        Commands.startEnd(() -> hood.setSpeed(-0.05), () -> hood.setSpeed(0), hood));
+        Commands.startEnd(() -> hood.setSpeed(-1.0), () -> hood.setSpeed(0), hood));
     driver.rightTrigger().whileTrue(
-        Commands.startEnd(() -> hood.setSpeed(0.05), () -> hood.setSpeed(0), hood));
+        Commands.startEnd(() -> hood.setSpeed(1.0), () -> hood.setSpeed(0), hood));
 
     // Distance suppliers for the shot map.
     DoubleSupplier hubDistance =

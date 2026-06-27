@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.SignalLogger;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -28,6 +29,11 @@ public class Robot extends TimedRobot {
    */
   
    public Robot() {
+    // Stop the CTRE signal logger from writing .hoot files — it was filling the roboRIO disk
+    // ("available disk space low" warning). We don't use those logs.
+    SignalLogger.enableAutoLogging(false);
+    SignalLogger.stop();
+
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();

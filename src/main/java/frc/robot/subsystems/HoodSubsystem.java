@@ -80,6 +80,8 @@ public class HoodSubsystem extends SubsystemBase {
 
     SmartDashboard.putNumber("Hood/EncoderOffset", offset);
     SmartDashboard.putBoolean("Hood/ZeroNow", false);
+    // LT/RT manual-jog strength (open-loop duty cycle). Raise it if the hood is too weak to move.
+    SmartDashboard.putNumber("Hood/JogPercent", 0.2);
     // Bench tuning: set Hood/TunePercent (0-100 % of the 0..OpenLimit range), flip Hood/GoToTune on,
     // and the hood PIDs there. Sweep the percent to see the PID track across your working range.
     SmartDashboard.putNumber("Hood/TunePercent", 0.0);
@@ -207,15 +209,18 @@ public class HoodSubsystem extends SubsystemBase {
     double maxOut = Constants.HoodConstants.kMaxOut;
     double output;
     if (manualPercent != 0.0) {
-      output = MathUtil.clamp(manualPercent, -maxOut, maxOut);
+      // Manual jog (LT/RT): open-loop, NOT limit-guarded, so you can always reach the stops (e.g.
+      // to find closed and zero). Strength = Hood/JogPercent, separate from the PID's MaxOut.
+      double jogCap = SmartDashboard.getNumber("Hood/JogPercent", 0.2);
+      output = MathUtil.clamp(manualPercent, -jogCap, jogCap);
       targetHoodRot = clampToLimits(getHoodRot()); // hold here when released
     } else if (zeroed) {
       output = MathUtil.clamp(pid.calculate(getHoodRot(), targetHoodRot), -maxOut, maxOut);
+      output = applyLimitGuard(output); // guard the PID only
     } else {
       output = 0.0; // not zeroed: only manual jog allowed (drive to closed, then Hood/ZeroNow)
     }
 
-    output = applyLimitGuard(output);
     output = applySlew(output);
     motor.set(output);
   }
