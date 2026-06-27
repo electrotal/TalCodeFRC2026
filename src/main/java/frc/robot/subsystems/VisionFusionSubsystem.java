@@ -6,9 +6,10 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 /**
- * Periodically injects Limelight pose measurements into the swerve pose estimator — X/Y ONLY.
- * The robot heading always comes from the gyro (trusted ~99.9%); the single-camera limelight yaw
- * is never allowed to set the robot angle. Vision only corrects translation.
+ * Injects Limelight pose into the swerve pose estimator. On the FIRST lock it seeds the full pose
+ * (position + heading) so the gyro frame is anchored to the field — this is what makes aiming work
+ * off odometry, even when no tag is currently visible. After that one-time anchor, per-frame
+ * corrections are X/Y ONLY: the gyro carries the heading (no per-frame jitter from the one-camera yaw).
  */
 public class VisionFusionSubsystem extends SubsystemBase {
 
@@ -71,9 +72,10 @@ public class VisionFusionSubsystem extends SubsystemBase {
     // going forward. Without this, the robot starts at (0,0) and every real tag reading
     // gets rejected because it looks like a giant jump.
     if (!odometrySeeded) {
-      // Seed POSITION from vision but keep the gyro heading — the limelight must never set the
-      // robot's angle (one camera is unreliable; the gyro is trusted).
-      swerve.resetPose(new Pose2d(meas.pose.getTranslation(), swerve.getHeading()));
+      // Seed the FULL pose from vision ONCE (position AND heading) so the gyro frame becomes
+      // field-aligned — this is what lets aiming work off odometry. After this anchor, the per-frame
+      // corrections below keep the gyro heading, so the angle stays gyro-driven and jitter-free.
+      swerve.resetPose(meas.pose);
       odometrySeeded = true;
       SmartDashboard.putString("Vision/Fusion/RejectReason", "SEEDED");
       SmartDashboard.putBoolean("Vision/Fusion/Seeded", true);
