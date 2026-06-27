@@ -4,42 +4,40 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
-import frc.robot.subsystems.SwerveSubsystem;
-import frc.robot.util.FieldTargetUtil;
 import frc.robot.util.ShotMap;
 
+import java.util.function.DoubleSupplier;
+
 /**
- * Updates hood + shooter setpoints from distance-to-hub lookup tables.
- * Distance is measured in meters.
- * Hood targets are in hood rotations.
- * Shooter targets are in RPM.
+ * Continuously drives hood angle + shooter RPM from a distance-to-shot lookup. The distance is
+ * supplied by the caller, so the same command serves the hub-distance follow (POV-Up) and the
+ * virtual-goal distance for shooting on the move. Hood targets are hood rotations; shooter RPM.
  */
 public class UpdateShotSetpointsFromDistance extends Command {
 
-  private final SwerveSubsystem swerve;
   private final ShooterSubsystem shooter;
   private final HoodSubsystem hood;
+  private final DoubleSupplier distanceMeters;
 
-  public UpdateShotSetpointsFromDistance(SwerveSubsystem swerve, ShooterSubsystem shooter, HoodSubsystem hood) {
-    this.swerve = swerve;
+  public UpdateShotSetpointsFromDistance(
+      ShooterSubsystem shooter, HoodSubsystem hood, DoubleSupplier distanceMeters) {
     this.shooter = shooter;
     this.hood = hood;
-    addRequirements(shooter);
+    this.distanceMeters = distanceMeters;
+    addRequirements(shooter, hood);
   }
 
   @Override
   public void execute() {
-    double distanceMeters = FieldTargetUtil.distanceToHubMeters(swerve.getPose());
-    ShotMap.ShotSolution shot = ShotMap.calculate(distanceMeters);
+    double d = distanceMeters.getAsDouble();
+    ShotMap.ShotSolution shot = ShotMap.calculate(d);
 
-    // hood.setHoodRot(shot.hoodRot());
+    hood.setHoodRot(shot.hoodRot());
     shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
 
-    SmartDashboard.putNumber("Shot/DistanceMeters", distanceMeters);
+    SmartDashboard.putNumber("Shot/DistanceMeters", d);
     SmartDashboard.putNumber("Shot/TargetHoodRot", shot.hoodRot());
-    SmartDashboard.putNumber("Shot/TargetTopRpm", shot.topRpm());
-    SmartDashboard.putNumber("Shot/TargetMidRpm", shot.midRpm());
-    SmartDashboard.putNumber("Shot/TargetBottomRpm", shot.bottomRpm());
+    SmartDashboard.putNumber("Shot/TargetRpm", shot.topRpm());
   }
 
   @Override

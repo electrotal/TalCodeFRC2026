@@ -83,6 +83,10 @@ public class IntakeSubsystem extends SubsystemBase {
     cl.StatorCurrentLimitEnable = true;
     cl.StatorCurrentLimit = 60;
     motor.getConfigurator().apply(cl);
+
+    // CAN: pivot feedback is the DIO through-bore, not the Talon, so no status signals are
+    // needed here. Throttle them all to ~4 Hz. Duty-cycle output control is unaffected.
+    motor.optimizeBusUtilization();
   }
 
   private static double wrap01(double x) {
@@ -137,10 +141,6 @@ public class IntakeSubsystem extends SubsystemBase {
     return targetRot;
   }
 
-  public double getThroughBoreContinuousRot() {
-    return throughBore.getContinuousRot();
-  }
-
   public double getMeasuredRot() {
     return getRel01();
   }
@@ -151,26 +151,6 @@ public class IntakeSubsystem extends SubsystemBase {
 
   public double getPivotErrorRot() {
     return wrapHalf(targetRot - getMeasuredRot());
-  }
-
-  public double getLastPivotPercent() {
-    return lastPivotPercent;
-  }
-
-  public double getLastRollerPercent() {
-    return lastRollerPercent;
-  }
-
-  public double getPivotMotorRotorPosRot() {
-    return pivotMotor.getPosition().getValueAsDouble();
-  }
-
-  public double getPivotMotorRotorVelRps() {
-    return pivotMotor.getVelocity().getValueAsDouble();
-  }
-
-  public double getRollerMotorRotorVelRps() {
-    return rollerMotor.getVelocity().getValueAsDouble();
   }
 
   public void open() {
@@ -237,19 +217,9 @@ public class IntakeSubsystem extends SubsystemBase {
 
     SmartDashboard.putString("Intake/State", open ? "Open" : clopenHoldEnabled ? "Clopen" : "Closed");
     SmartDashboard.putBoolean("Intake/EncoderConnected", throughBore.isConnected());
-    SmartDashboard.putNumber("Intake/Abs01", getAbs01());
-    SmartDashboard.putNumber("Intake/Rel01", getRel01());
     SmartDashboard.putNumber("Intake/MeasRot", getMeasuredRot());
     SmartDashboard.putNumber("Intake/ErrRot", getPivotErrorRot());
-    SmartDashboard.putNumber("Intake/ThroughBoreContRot", getThroughBoreContinuousRot());
     SmartDashboard.putNumber("Intake/PivotCmdPct", lastPivotPercent);
-    SmartDashboard.putNumber("Intake/RollerCmdPct", lastRollerPercent);
-    SmartDashboard.putNumber("Intake/PivotMotorRotorPosRot", getPivotMotorRotorPosRot());
-    SmartDashboard.putNumber("Intake/PivotMotorRotorVelRps", getPivotMotorRotorVelRps());
-    SmartDashboard.putNumber("Intake/RollerMotorRotorVelRps", getRollerMotorRotorVelRps());
-    SmartDashboard.putBoolean("Intake/Open", open);
-    SmartDashboard.putBoolean("Intake/Clopen", clopenHoldEnabled);
-    SmartDashboard.putBoolean("Intake/PivotHoldEnabled", pivotHoldEnabled);
 
     if (!pivotHoldEnabled) {
       lastPivotPercent = 0.0;

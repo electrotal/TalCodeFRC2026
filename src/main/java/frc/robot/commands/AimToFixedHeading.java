@@ -14,7 +14,8 @@ public class AimToFixedHeading extends Command {
         swerve,
         () -> 0.0,
         () -> 0.0,
-        () -> Rotation2d.fromDegrees(headingDeg)
+        () -> Rotation2d.fromDegrees(headingDeg),
+        () -> 0.0 // auto: no driver rotation override
     );
     addRequirements(swerve);
   }

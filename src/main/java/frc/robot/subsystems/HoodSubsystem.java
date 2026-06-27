@@ -1,10 +1,10 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.PersistMode;
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkAbsoluteEncoder;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
@@ -14,166 +14,191 @@ import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.util.MultiTurnAbsoluteEncoder;
 
 /**
- * Hood subsystem — closed-loop position control.
+ * Hood subsystem. Motor: NEO 1.1 on Spark MAX (CAN {@link Constants.CanId#kHoodAngleNeo}).
+ * Position: REV Through-Bore ABSOLUTE encoder on the Spark MAX data port (getAbsoluteEncoder()),
+ * wrapped for multi-turn continuity. Position units are "hood rotations": 0 = fully closed.
  *
- * Motor:  NEO 1.1 on Spark Max (CAN 26).
- * Sensor: NEO relative encoder (motor.getEncoder()). The absolute through-bore
- *         was unreliable, so the hood is driven off the relative encoder; it
- *         starts at 0 every boot, so re-zero with {@link #zero()} if needed.
+ * <p>Control lives entirely in {@link #periodic()} (single owner of motor output): commands set
+ * intent via {@link #setHoodRot(double)} (PID to a target) or {@link #setSpeed(double)} (manual
+ * jog). PID output is clamped and slew-limited so it stays gentle on the mechanism.
  *
- * Control: a roboRIO-side {@link PIDController} runs in {@link #periodic()} and
- *          drives the hood to {@code targetRot}. Position is in encoder rotations
- *          over the range [kMinPos, kMaxPos] (0 = fully closed, max = fully open).
- *          Gains, max output and (separately) a tune target are live-tunable from
- *          Elastic/SmartDashboard so the angle command can be dialed in on the fly.
+ * <p>Bring-up: drive to the closed stop with manual jog, then press Hood/ZeroNow. Re-zero after
+ * every power cycle (an absolute encoder only knows its within-one-turn position at boot, and the
+ * hood spans more than one encoder turn). Positive output must INCREASE Hood/HoodRot (= opening);
+ * if it decreases, flip kHoodInverted (motor) or kAbsEncoderInverted (encoder) until they agree.
  */
 public class HoodSubsystem extends SubsystemBase {
 
-  // ── Hardware ────────────────────────────────────────────────────────────────
-
   private final SparkMax motor =
       new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
-
-  private final RelativeEncoder encoder;
+  private final SparkAbsoluteEncoder absEncoder = motor.getAbsoluteEncoder();
+  private final MultiTurnAbsoluteEncoder hoodEncoder =
+      new MultiTurnAbsoluteEncoder(absEncoder::getPosition, () -> true);
 
   private final PIDController pid =
       new PIDController(
-          Constants.HoodConstants.kAngleP,
-          Constants.HoodConstants.kAngleI,
-          Constants.HoodConstants.kAngleD);
+          Constants.HoodConstants.kP,
+          Constants.HoodConstants.kI,
+          Constants.HoodConstants.kD);
 
-  // ── State ─────────────────────────────────────────────────────────────────────
-
-  private double encoderOffset = Constants.HoodConstants.kEncoderOffsetRot;
-  private double maxOut        = Constants.HoodConstants.kMaxOut;
-  private double targetRot     = Constants.HoodConstants.kMinPos;
-
-  /** When true, periodic() actively drives the PID. Manual setSpeed() turns it off. */
-  private boolean closedLoopEnabled = false;
-
-  // ─────────────────────────────────────────────────────────────────────────────
+  private double offset = Constants.HoodConstants.kEncoderOffsetRot;
+  private double targetHoodRot = Constants.HoodConstants.kClosedHoodRot;
+  private double manualPercent = 0.0;
+  private double lastOutput = 0.0;
+  private boolean zeroed = false;
 
   public HoodSubsystem() {
     SparkMaxConfig cfg = new SparkMaxConfig();
     cfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
     cfg.inverted(Constants.MotorInverts.kHoodInverted);
     cfg.smartCurrentLimit(30); // protect the NEO/gearbox if the hood stalls on a hard stop
+    cfg.absoluteEncoder.inverted(Constants.HoodConstants.kAbsEncoderInverted);
+    // CAN: the absolute-encoder position is our feedback — keep it fast; slow everything else.
+    cfg.signals
+        .absoluteEncoderPositionPeriodMs(20)
+        .primaryEncoderPositionPeriodMs(500)
+        .primaryEncoderVelocityPeriodMs(500)
+        .appliedOutputPeriodMs(50)
+        .busVoltagePeriodMs(500)
+        .outputCurrentPeriodMs(500)
+        .motorTemperaturePeriodMs(1000);
     motor.configure(cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-
-    encoder = motor.getEncoder();
 
     pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
 
-    // PID gains + max output: tunable from Elastic's Preferences view AND
-    // persistent across reboots (stored on the roboRIO). initDouble only seeds
-    // the value the first time, so your dialed-in numbers survive a redeploy.
-    Preferences.initDouble("Hood/kP",     Constants.HoodConstants.kAngleP);
-    Preferences.initDouble("Hood/kI",     Constants.HoodConstants.kAngleI);
-    Preferences.initDouble("Hood/kD",     Constants.HoodConstants.kAngleD);
+    // Gains + limits: live-tunable AND persistent across reboots (stored on the roboRIO via
+    // WPILib Preferences). initDouble seeds only the first time, so dialed-in values survive a
+    // redeploy. (Adopted from the teammate hood commit — the right call for tuning.)
+    Preferences.initDouble("Hood/kP", Constants.HoodConstants.kP);
+    Preferences.initDouble("Hood/kI", Constants.HoodConstants.kI);
+    Preferences.initDouble("Hood/kD", Constants.HoodConstants.kD);
     Preferences.initDouble("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
+    Preferences.initDouble("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
 
-    // Transient tunables / inputs (live in SmartDashboard, reset each boot).
-    SmartDashboard.putNumber("Hood/EncoderOffset",  encoderOffset);
-    SmartDashboard.putNumber("Hood/TuneTargetRot",  targetRot);
+    SmartDashboard.putNumber("Hood/EncoderOffset", offset);
+    SmartDashboard.putBoolean("Hood/ZeroNow", false);
   }
 
-  // ── Getters ──────────────────────────────────────────────────────────────────
+  // ── Position ─────────────────────────────────────────────────────────────────
 
-  /** Raw relative-encoder value in rotations. */
+  /** Continuous multi-turn encoder reading, in encoder rotations. */
   public double getRawEncoder() {
-    return encoder.getPosition();
+    return hoodEncoder.getContinuousRot();
   }
 
-  /** Encoder value with the zero offset applied. */
   public double getOffsetEncoder() {
-    return getRawEncoder() - encoderOffset;
+    return getRawEncoder() - offset;
   }
 
-  /** Hood position in rotations — the PID control variable, range [kMinPos, kMaxPos]. */
+  /** Hood position in hood rotations (0 = closed). */
   public double getHoodRot() {
-    return getOffsetEncoder();
+    return getOffsetEncoder() / Constants.HoodConstants.kEncoderTurnsPerHoodTurn;
   }
 
-  /** Hood position as a percentage: 0 = fully closed, 100 = fully open. */
+  /** 0 = fully closed, 100 = fully open. */
   public double getHoodPercent() {
-    double range = Constants.HoodConstants.kMaxPos - Constants.HoodConstants.kMinPos;
+    double range = Constants.HoodConstants.kOpenHoodRot - Constants.HoodConstants.kMinHoodRot;
     if (range == 0) return 0.0;
-    return ((getHoodRot() - Constants.HoodConstants.kMinPos) / range) * 100.0;
+    return ((getHoodRot() - Constants.HoodConstants.kMinHoodRot) / range) * 100.0;
   }
 
-  /** Current PID target in rotations. */
   public double getTargetHoodRot() {
-    return targetRot;
+    return targetHoodRot;
   }
 
-  /** True once the hood is within tolerance of its target. */
-  public boolean atTarget() {
-    return closedLoopEnabled && pid.atSetpoint();
+  /** True only once the hood has been zeroed this boot AND is within tolerance of its target. */
+  public boolean isAtAngle() {
+    return zeroed && Math.abs(getHoodRot() - targetHoodRot) <= Constants.HoodConstants.kToleranceHoodRot;
   }
 
-  // ── Setters ──────────────────────────────────────────────────────────────────
+  // ── Intent ───────────────────────────────────────────────────────────────────
 
-  /** Command a hood target in rotations. Clamped to [kMinPos, kMaxPos]; engages closed loop. */
-  public void setHoodPosition(double rot) {
-    targetRot = MathUtil.clamp(rot, Constants.HoodConstants.kMinPos, Constants.HoodConstants.kMaxPos);
-    closedLoopEnabled = true;
+  /** PID the hood to a target (clamped to limits). Cancels any manual jog. */
+  public void setHoodRot(double rot) {
+    manualPercent = 0.0;
+    targetHoodRot = clampToLimits(rot);
   }
 
-  /** Command a hood target as a percentage (0 = closed, 100 = open). Engages closed loop. */
-  public void setHoodPercent(double percent) {
-    double clamped = MathUtil.clamp(percent, 0.0, 100.0);
-    double range   = Constants.HoodConstants.kMaxPos - Constants.HoodConstants.kMinPos;
-    setHoodPosition(Constants.HoodConstants.kMinPos + (clamped / 100.0) * range);
-  }
-
-  /** Open-loop manual jog. Disables closed loop until a position is commanded again. */
+  /** Manual jog (LT/RT). 0 releases back to holding the current position. */
   public void setSpeed(double speed) {
-    closedLoopEnabled = false;
-    motor.set(speed);
+    manualPercent = speed;
   }
 
   public void stop() {
-    closedLoopEnabled = false;
-    motor.set(0.0);
+    manualPercent = 0.0;
+    targetHoodRot = clampToLimits(getHoodRot());
   }
 
-  /** Re-zero: make the current physical position read as kMinPos. */
-  public void zero() {
-    encoderOffset = getRawEncoder() - Constants.HoodConstants.kMinPos;
-    // Keep the dashboard copy in sync so periodic()'s read-back doesn't undo it.
-    SmartDashboard.putNumber("Hood/EncoderOffset", encoderOffset);
+  /** Capture the current reading as the new zero (closed stop). No hardware reset. */
+  public void zeroAtCurrent() {
+    offset = getRawEncoder();
+    Constants.HoodConstants.kEncoderOffsetRot = offset;
+    targetHoodRot = Constants.HoodConstants.kClosedHoodRot;
+    zeroed = true;
+    SmartDashboard.putNumber("Hood/EncoderOffset", offset);
   }
 
-  // ── Periodic ─────────────────────────────────────────────────────────────────
+  // ── Control (single owner of motor output) ─────────────────────────────────────
+
+  private double clampToLimits(double rot) {
+    return MathUtil.clamp(rot, Constants.HoodConstants.kMinHoodRot, Constants.HoodConstants.kOpenHoodRot);
+  }
+
+  /** Stop driving into a hard limit. Positive output = opening (increasing hood rotations). */
+  private double applyLimitGuard(double output) {
+    double pos = getHoodRot();
+    if (output > 0 && pos >= Constants.HoodConstants.kOpenHoodRot) return 0.0;
+    if (output < 0 && pos <= Constants.HoodConstants.kMinHoodRot) return 0.0;
+    return output;
+  }
+
+  /** Cap how fast the output can change per loop — gentle on the mechanism. */
+  private double applySlew(double output) {
+    double maxDelta = Constants.HoodConstants.kSlewPerLoop;
+    output = MathUtil.clamp(output, lastOutput - maxDelta, lastOutput + maxDelta);
+    lastOutput = output;
+    return output;
+  }
 
   @Override
   public void periodic() {
-    // Live tuning: pull gains + max output from Preferences, zero offset from SmartDashboard.
-    double newP = Preferences.getDouble("Hood/kP", pid.getP());
-    double newI = Preferences.getDouble("Hood/kI", pid.getI());
-    double newD = Preferences.getDouble("Hood/kD", pid.getD());
-    if (newP != pid.getP() || newI != pid.getI() || newD != pid.getD()) {
-      pid.setPID(newP, newI, newD);
-    }
-    maxOut        = Preferences.getDouble("Hood/MaxOut", maxOut);
-    encoderOffset = SmartDashboard.getNumber("Hood/EncoderOffset", encoderOffset);
+    // Live-tunable gains + calibration knobs — persistent across reboots via Preferences.
+    Constants.HoodConstants.kP = Preferences.getDouble("Hood/kP", Constants.HoodConstants.kP);
+    Constants.HoodConstants.kI = Preferences.getDouble("Hood/kI", Constants.HoodConstants.kI);
+    Constants.HoodConstants.kD = Preferences.getDouble("Hood/kD", Constants.HoodConstants.kD);
+    Constants.HoodConstants.kMaxOut = Preferences.getDouble("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
+    Constants.HoodConstants.kOpenHoodRot =
+        Preferences.getDouble("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
+    pid.setPID(Constants.HoodConstants.kP, Constants.HoodConstants.kI, Constants.HoodConstants.kD);
 
-    if (closedLoopEnabled) {
-      double out = pid.calculate(getHoodRot(), targetRot);
-      out = MathUtil.clamp(out, -maxOut, maxOut);
-      motor.set(out);
+    // Software-zero button (captures current reading at the closed stop, then self-resets).
+    if (SmartDashboard.getBoolean("Hood/ZeroNow", false)) {
+      zeroAtCurrent();
+      SmartDashboard.putBoolean("Hood/ZeroNow", false);
     }
 
-    // Telemetry
-    SmartDashboard.putNumber("Hood/RawEncoder",    getRawEncoder());
-    SmartDashboard.putNumber("Hood/OffsetEncoder", getOffsetEncoder());
-    SmartDashboard.putNumber("Hood/HoodRot",       getHoodRot());
-    SmartDashboard.putNumber("Hood/PercentOpen",   getHoodPercent());
-    SmartDashboard.putNumber("Hood/TargetRot",     targetRot);
-    SmartDashboard.putNumber("Hood/Error",         targetRot - getHoodRot());
-    SmartDashboard.putBoolean("Hood/ClosedLoop",   closedLoopEnabled);
-    SmartDashboard.putBoolean("Hood/AtTarget",     atTarget());
+    SmartDashboard.putNumber("Hood/HoodRot", getHoodRot());
+    SmartDashboard.putNumber("Hood/RawEncoder", getRawEncoder());
+    SmartDashboard.putNumber("Hood/TargetRot", targetHoodRot);
+    SmartDashboard.putBoolean("Hood/AtAngle", isAtAngle());
+    SmartDashboard.putBoolean("Hood/Zeroed", zeroed);
+
+    double maxOut = Constants.HoodConstants.kMaxOut;
+    double output;
+    if (manualPercent != 0.0) {
+      output = MathUtil.clamp(manualPercent, -maxOut, maxOut);
+      targetHoodRot = clampToLimits(getHoodRot()); // hold here when released
+    } else if (zeroed) {
+      output = MathUtil.clamp(pid.calculate(getHoodRot(), targetHoodRot), -maxOut, maxOut);
+    } else {
+      output = 0.0; // not zeroed: only manual jog allowed (drive to closed, then Hood/ZeroNow)
+    }
+
+    output = applyLimitGuard(output);
+    output = applySlew(output);
+    motor.set(output);
   }
 }

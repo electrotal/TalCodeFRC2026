@@ -17,7 +17,8 @@ public class DriveFacePoint extends Command {
       SwerveSubsystem swerve,
       DoubleSupplier xFieldMetersPerSec,
       DoubleSupplier yFieldMetersPerSec,
-      Supplier<Translation2d> targetPointSupplier) {
+      Supplier<Translation2d> targetPointSupplier,
+      DoubleSupplier rotationOverrideRadPerSec) {
 
     Supplier<Rotation2d> targetHeading =
         () -> AimingUtil.headingToPoint(swerve.getPose(), targetPointSupplier.get());
@@ -26,7 +27,8 @@ public class DriveFacePoint extends Command {
         swerve,
         xFieldMetersPerSec,
         yFieldMetersPerSec,
-        targetHeading);
+        targetHeading,
+        rotationOverrideRadPerSec);
 
     addRequirements(swerve);
   }

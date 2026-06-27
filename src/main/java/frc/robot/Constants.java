@@ -124,49 +124,53 @@ public final class Constants {
     public static final double kToggleTestLowRpm = 2500.0;
     public static final double kToggleTestHighRpm = 5000.0;
 
+    /** Point-blank hub preset RPM (POV-Right). Tune for your point-blank shot. */
+    public static final double kHubPresetRpm = 2800.0;
+
     private ShooterConstants() {}
   }
 
   /**
-   * Hood is now a motor-driven joint.
-   * Sensor is REV Through Bore duty-cycle encoder on DIO.
+   * Hood = NEO 1.1 on a Spark MAX (CAN {@link CanId#kHoodAngleNeo}). Position comes from a REV
+   * Through-Bore ABSOLUTE encoder on the Spark MAX data port, read via getAbsoluteEncoder().
    *
-   * Position units used here: "hood rotations" in the encoder's 0..1 scale.
-   * That means:
-   * - One full rotation of the encoder shaft = 1.0
-   * - Your hood will likely use only part of that range.
+   * Units: "hood rotations". The encoder is geared faster than the hood
+   * ({@link #kEncoderTurnsPerHoodTurn}), and full travel exceeds one encoder turn, so a multi-turn
+   * accumulator gives a continuous reading. Closed = 0; the open limit is measured on the real
+   * mechanism (see the distance-calibration / hood-zero procedure) and stays tunable.
+   *
+   * Mutable fields are live-tunable from Elastic — they are the calibration knobs.
    */
   public static final class HoodConstants {
-    public static final int kThroughBoreDio = 6;
+    /** Encoder shaft turns per one hood rotation (encoder geared ~2x the hood). */
+    public static final double kEncoderTurnsPerHoodTurn = 2.0;
 
-    /**
-     * Live-tunable position PID gains (read back from Elastic every loop in
-     * HoodSubsystem.periodic()). These are the starting points for tuning —
-     * adjust them from the dashboard, then lock the dialed-in values here.
-     */
-    public static double kAngleP = 1.0;
-    public static double kAngleI = 0.0;
-    public static double kAngleD = 0.0;
+    /** Invert the absolute encoder if its reading counts down as the hood opens. */
+    public static final boolean kAbsEncoderInverted = false;
 
-    /**
-     * Encoder zero offset in encoder rotations. The hood reads its position from
-     * the NEO's relative encoder, which starts at 0 every boot, so this is mostly
-     * informational — use HoodSubsystem.zero() to re-zero at runtime.
-     */
-    public static final double kEncoderOffsetRot = 0.0;
+    /** Software zero offset in ENCODER rotations. The Hood/ZeroNow button overwrites this at
+     *  runtime by capturing the current reading at the closed stop (no hardware reset). */
+    public static double kEncoderOffsetRot = 0.0;
 
-    /**
-     * Hood operating range in encoder rotations (NEO relative encoder).
-     * The PID setpoint is clamped to this range; setHoodPercent() maps
-     * 0..100 % linearly across it. 0 = fully closed, kMaxPos = fully open.
-     */
-    public static final double kMinPos = 0.0;
-    public static final double kMaxPos = 1.25;
+    /** Hood fully closed (steepest). Hard min for clamping. */
+    public static final double kClosedHoodRot = 0.00;
+    public static final double kMinHoodRot = kClosedHoodRot;
+    /** Hood fully open (flattest). Measure on the real mechanism, then tune live. */
+    public static double kOpenHoodRot = 0.71;
 
-    /** Maximum |motor output| the PID may command (duty cycle, 0..1). */
-    public static double kMaxOut = 0.5;
-    /** Position tolerance (rotations) for atTarget(). */
-    public static final double kToleranceHoodRot = 0.01;
+    /** Gentle position PID — live-tunable from Elastic. */
+    public static double kP = 6.0;
+    public static double kI = 0.0;
+    public static double kD = 0.2;
+
+    /** Gentleness guards (live-tunable): output magnitude cap and per-loop slew cap. */
+    public static double kMaxOut = 0.30;
+    public static double kSlewPerLoop = 0.04;
+
+    /** Point-blank hub preset hood angle (POV-Right) — min/steep angle for a point-blank shot. */
+    public static final double kHubPresetHoodRot = kClosedHoodRot;
+
+    public static final double kToleranceHoodRot = 0.005;
 
     private HoodConstants() {}
   }

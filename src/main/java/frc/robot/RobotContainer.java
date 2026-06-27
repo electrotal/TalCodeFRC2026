@@ -1,26 +1,29 @@
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.AutoNamedCommands;
 import frc.robot.commands.Autos;
+import frc.robot.commands.DriveFaceHub;
 import frc.robot.commands.DriveFaceVirtualGoal;
+import frc.robot.commands.FeedShooterWithIntakeJerk;
+import frc.robot.commands.PrepareToShootAtHub;
 import frc.robot.commands.ResetGyro;
 import frc.robot.commands.RunTransportWhileHeld;
-import frc.robot.commands.SetHoodAngle;
 import frc.robot.commands.ToggleIntake;
+import frc.robot.commands.UpdateShotSetpointsFromDistance;
+import frc.robot.util.AimingUtil;
 import frc.robot.util.FieldTargetUtil;
-import frc.robot.util.ShotMap;
-// import frc.robot.subsystems.Angleshooting;
-// import frc.robot.subsystems.ClimberSubsystem;
+import frc.robot.util.ShootingOnTheMoveUtil;
 import frc.robot.subsystems.DriverDisplaySubsystem;
 import frc.robot.subsystems.HoodSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
@@ -39,13 +42,10 @@ public class RobotContainer {
   private final TransportSubsystem transport = new TransportSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem();
   private final HoodSubsystem hood = new HoodSubsystem();
-//   private final ClimberSubsystem climber = new ClimberSubsystem();
   private final VisionSubsystem vision = new VisionSubsystem();
-//   private final Angleshooting angleShooting = new Angleshooting();
-
 
   private final DriverDisplaySubsystem display =
-      new DriverDisplaySubsystem(drivebase, shooter, hood, intake, transport, vision);
+      new DriverDisplaySubsystem(drivebase, shooter, hood, vision);
 
   private final VisionFusionSubsystem visionFusion = new VisionFusionSubsystem(drivebase, vision);
 
@@ -70,7 +70,7 @@ public class RobotContainer {
   public RobotContainer() {
     CommandScheduler.getInstance().registerSubsystem(display, visionFusion);
 
-    AutoNamedCommands.register(drivebase, shooter, transport, intake);
+    AutoNamedCommands.register(drivebase, shooter, transport, intake, hood);
 
     autoChooser = Autos.buildChooser();
     SmartDashboard.putData("Auto Chooser", autoChooser);
@@ -92,117 +92,100 @@ public class RobotContainer {
     return raw * Constants.maxSpeed * 0.8;
   }
 
+  private static boolean isRedAlliance() {
+    var a = DriverStation.getAlliance();
+    return a.isPresent() && a.get() == DriverStation.Alliance.Red;
+  }
+
+  // Field-frame translation for the lock-on commands, alliance-flipped to MATCH the default drive's
+  // allianceRelativeControl(true). Without this the lock-on felt robot-centric/mirrored on red
+  // (driver-forward became field-backward). Front = away from the driver on both alliances.
+  private double allianceFieldX() {
+    double v = scaledDriveInput(-driver.getLeftY());
+    return isRedAlliance() ? -v : v;
+  }
+
+  private double allianceFieldY() {
+    double v = scaledDriveInput(-driver.getLeftX());
+    return isRedAlliance() ? -v : v;
+  }
+
+  // Driver rotation override (rad/s) from the right stick. When the driver rotates, they win over
+  // the auto-aim heading PID — the limelight is noisy during calibration, the gyro is reliable.
+  private double rotationOverrideRadPerSec() {
+    double rx = driver.getRightX();
+    if (Math.abs(rx) < OperatorConstants.DEADBAND) return 0.0;
+    return -rx * Constants.SwerveConstants.kMaxAngularSpeedRadPerSec;
+  }
+
   private void configureBindings() {
     Trigger menuAndView = driver.start().and(driver.back());
     menuAndView.onTrue(new ResetGyro(drivebase));
 
     driver.x().toggleOnTrue(
-        RunTransportWhileHeld.create(transport, transport::getTransportPercent)
-    );
+        RunTransportWhileHeld.create(transport, transport::getTransportPercent));
 
     driver.rightBumper().onTrue(new ToggleIntake(intake));
     driver.leftBumper().onTrue(Commands.runOnce(intake::togglePivotHoldEnabled));
     driver.y().onTrue(Commands.runOnce(intake::clopen, intake));
 
-    // Shooter wheel test toggles — RPMs tunable live via SmartDashboard/Elastic
-    
+    // B: shooter wheel test toggle — RPM tunable live via Elastic.
     driver.b().toggleOnTrue(createShooterToggleCommand(shooter::getLiveHighRpm));
 
-    // A: run transport in reverse while held
+    // A: run transport in reverse while held.
     driver.a().whileTrue(
         Commands.runEnd(
             () -> transport.runAll(-transport.getTransportPercent()),
             transport::stopAll,
             transport));
 
-
-    // Left trigger: hood to -5% while held, closes on release
+    // LT/RT: manual hood jog — for calibration (drive to the closed stop to zero, find the open limit).
     driver.leftTrigger().whileTrue(
-        Commands.startEnd(
-            () -> hood.setSpeed(-0.05),
-            () -> hood.setSpeed(0),
-            hood));
+        Commands.startEnd(() -> hood.setSpeed(-0.05), () -> hood.setSpeed(0), hood));
+    driver.rightTrigger().whileTrue(
+        Commands.startEnd(() -> hood.setSpeed(0.05), () -> hood.setSpeed(0), hood));
 
-    // Right trigger = how far the hood is open: 0 % trigger -> fully closed (0),
-    // 100 % trigger -> fully open (kMaxPos). Runs as the hood's default command so
-    // the hood continuously tracks the trigger whenever nothing else owns it.
-    hood.setDefaultCommand(
-        new SetHoodAngle(hood,
-            () -> driver.getRightTriggerAxis() * Constants.HoodConstants.kMaxPos));
+    // Distance suppliers for the shot map.
+    DoubleSupplier hubDistance =
+        () -> FieldTargetUtil.distanceToHubMeters(drivebase.getPose());
+    DoubleSupplier virtualGoalDistance =
+        () -> AimingUtil.distanceToPointMeters(
+            drivebase.getPose(),
+            ShootingOnTheMoveUtil.virtualGoalFromSwerve(drivebase, FieldTargetUtil.hubCenterForAlliance()));
 
-    // Elastic button: click to re-zero the hood encoder (current position -> 0).
-    // ignoringDisable so it works while the robot is disabled.
-    SmartDashboard.putData("Hood/Zero Encoder",
-        Commands.runOnce(hood::zero).ignoringDisable(true).withName("Zero Hood Encoder"));
-
-    // D-pad Down: closed-loop hood tuning. While held, drives the hood to the
-    // live "Hood/TuneTargetRot" value from Elastic. Sweep that target (and the
-    // Hood/kP,kI,kD gains) on the fly to dial in the angle command.
-    driver.povDown().whileTrue(
-        new SetHoodAngle(hood, () -> SmartDashboard.getNumber("Hood/TuneTargetRot", 0.0)));
-
-    // Drive + auto-rotate to hub — translation stays field-oriented, rotation locks on target
+    // Left stick click: SHOOT ON THE MOVE — face the virtual (leading) goal AND drive shooter RPM +
+    // hood angle from that same virtual-goal distance.
     driver.leftStick().toggleOnTrue(
-        new frc.robot.commands.DriveFaceHub(
-            drivebase,
-            () -> scaledDriveInput(-driver.getLeftY()),
-            () -> scaledDriveInput(-driver.getLeftX())
-        )
-    );
-
-    // Drive + auto-rotate to virtual goal (shooting on the move)
-    driver.rightStick().toggleOnTrue(
         new DriveFaceVirtualGoal(
-            drivebase,
-            () -> scaledDriveInput(-driver.getLeftY()),
-            () -> scaledDriveInput(-driver.getLeftX())
-        )
-    );
+                drivebase, this::allianceFieldX, this::allianceFieldY, this::rotationOverrideRadPerSec)
+            .alongWith(new UpdateShotSetpointsFromDistance(shooter, hood, virtualGoalDistance)));
 
-    // D-pad Up: toggle distance-based shooter RPM (continuously updates from robot position)
-    // Also publishes Shot/HoodRot for future hood integration
-    driver.povUp().toggleOnTrue(
-        Commands.runEnd(
-            () -> {
-              double dist = FieldTargetUtil.distanceToHubMeters(drivebase.getPose());
-              ShotMap.ShotSolution shot = ShotMap.calculate(dist);
-              shooter.setTargetRpms(shot.topRpm(), shot.midRpm(), shot.bottomRpm());
-              SmartDashboard.putNumber("Shot/DistanceM", dist);
-              SmartDashboard.putNumber("Shot/HoodRot", shot.hoodRot());
-            },
-            shooter::stop,
-            shooter)
-    );
+    // Right stick click: lock rotation to the hub (plain auto-aim; shoot via POV).
+    driver.rightStick().toggleOnTrue(
+        new DriveFaceHub(
+            drivebase, this::allianceFieldX, this::allianceFieldY, this::rotationOverrideRadPerSec));
 
-    // Short rumble pulse when shooter reaches target speed (stable for 0.15s)
-    new Trigger(() -> shooter.isAtSpeedForTime(0.15))
-        .onTrue(Commands.startEnd(
-            () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.5),
-            () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.0))
-            .withTimeout(0.3));
+    // POV-Up: distance follow — ramp shooter RPM AND hood angle from live distance; holds until
+    // toggled off or POV-Down.
+    driver.povUp().toggleOnTrue(new UpdateShotSetpointsFromDistance(shooter, hood, hubDistance));
 
-    // D-pad Down: stop shooter immediately (zero voltage, no PID to zero)
+    // POV-Down: stop the shooter (ends the distance follow / hub preset).
     driver.povDown().onTrue(Commands.runOnce(shooter::stop, shooter));
 
-    // D-pad Left: toggle climber down
-    // driver.povLeft().toggleOnTrue(
-    //     Commands.startEnd(
-    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbDownPercent),
-    //         climber::stop,
-    //         climber));
-    // // D-pad Right: toggle climber up
-    // driver.povRight().toggleOnTrue(
-    //     Commands.startEnd(
-    //         () -> climber.setPercent(Constants.ClimberConstants.kClimbUpPercent),
-    //         climber::stop,
-    //         climber));
+    // POV-Right: point-blank HUB PRESET — fixed min hood angle + fixed RPM for shooting parked in
+    // front of the hub, no distance tracking. Toggle off to freeze; POV-Down to stop. (Constants:
+    // HoodConstants.kHubPresetHoodRot, ShooterConstants.kHubPresetRpm.)
+    driver.povRight().toggleOnTrue(PrepareToShootAtHub.create(shooter, hood));
 
-            // driver.rightTrigger().whileTrue(angleShooting.runMotorCommand(0.5));
+    // POV-Left: jerk the intake forward/back to settle balls inside (values in FeedConstants).
+    driver.povLeft().whileTrue(new FeedShooterWithIntakeJerk(transport, intake));
 
-        // כאשר לוחצים על ההדק השמאלי (LT) -> המנוע פועל אחורה (לדוגמה: 50%- מהירות)
-        // driver.leftTrigger().whileTrue(angleShooting.runMotorCommand(-0.5));
-
-            
+    // Ready indicator: rumble while BOTH shooter RPM and hood angle are on target. The green light
+    // is the Robot/ReadyToShoot boolean published by DriverDisplaySubsystem.
+    new Trigger(display::isReadyToShoot).whileTrue(
+        Commands.startEnd(
+            () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.4),
+            () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.0)));
   }
 
   public Command getAutonomousCommand() {
