@@ -49,6 +49,9 @@ public class TransportSubsystem extends SubsystemBase {
     cl.StatorCurrentLimitEnable = true;
     cl.StatorCurrentLimit = 60;
     motor.getConfigurator().apply(cl);
+
+    // CAN: transport is open-loop duty-cycle only, no feedback used. Throttle status signals.
+    motor.optimizeBusUtilization();
   }
 
   public double getLastMainPercent() {
@@ -57,22 +60,6 @@ public class TransportSubsystem extends SubsystemBase {
 
   public double getLastFeederPercent() {
     return lastFeederPercent;
-  }
-
-  public double getMainRotorPosRot() {
-    return mainConveyor.getPosition().getValueAsDouble();
-  }
-
-  public double getMainRotorVelRps() {
-    return mainConveyor.getVelocity().getValueAsDouble();
-  }
-
-  public double getFeederRotorPosRot() {
-    return shooterFeeder.getPosition().getValueAsDouble();
-  }
-
-  public double getFeederRotorVelRps() {
-    return shooterFeeder.getVelocity().getValueAsDouble();
   }
 
   // Main conveyor percent output.
@@ -113,13 +100,7 @@ public class TransportSubsystem extends SubsystemBase {
     liveTransportPercent = SmartDashboard.getNumber("Transport/TransportPercent", liveTransportPercent);
     liveFeederPercent    = SmartDashboard.getNumber("Transport/FeederPercent",    liveFeederPercent);
 
-    // Diagnostics — use these in Elastic to debug the motor
-    // SmartDashboard.putNumber("Transport/MainCmdPct",    lastMainPercent);
-    // SmartDashboard.putNumber("Transport/FeederCmdPct",  lastFeederPercent);
-    // SmartDashboard.putNumber("Transport/MainVelRps",    getMainRotorVelRps());
-    // SmartDashboard.putNumber("Transport/FeederVelRps",  getFeederRotorVelRps());
-    // SmartDashboard.putNumber("Transport/MainStatorA",   mainConveyor.getStatorCurrent().getValueAsDouble());
-    // SmartDashboard.putNumber("Transport/FeederStatorA", shooterFeeder.getStatorCurrent().getValueAsDouble());
-    // SmartDashboard.putNumber("Transport/MainSupplyV",   mainConveyor.getSupplyVoltage().getValueAsDouble());
+    SmartDashboard.putNumber("Transport/MainCmdPct",   lastMainPercent);
+    SmartDashboard.putNumber("Transport/FeederCmdPct", lastFeederPercent);
   }
 }

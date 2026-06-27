@@ -2,6 +2,8 @@ package frc.robot.util;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.robot.subsystems.SwerveSubsystem;
 
 public final class ShootingOnTheMoveUtil {
 
@@ -23,5 +25,14 @@ public final class ShootingOnTheMoveUtil {
         hubCenter.getX() - vxFieldMetersPerSec * kLeadTimeSeconds,
         hubCenter.getY() - vyFieldMetersPerSec * kLeadTimeSeconds
     );
+  }
+
+  /** Virtual (lead) goal for the current robot motion — shared by the aim command and the
+   *  shooter/hood distance follow so both target the same point. */
+  public static Translation2d virtualGoalFromSwerve(SwerveSubsystem swerve, Translation2d hubCenter) {
+    ChassisSpeeds robot = swerve.getRobotRelativeSpeeds();
+    ChassisSpeeds field = ChassisSpeeds.fromRobotRelativeSpeeds(
+        robot.vxMetersPerSecond, robot.vyMetersPerSecond, robot.omegaRadiansPerSecond, swerve.getHeading());
+    return virtualGoal(hubCenter, swerve.getPose(), field.vxMetersPerSecond, field.vyMetersPerSecond);
   }
 }

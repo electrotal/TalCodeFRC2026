@@ -125,17 +125,22 @@ public final class Constants {
     public static final double kToggleTestLowRpm = 2500.0;
     public static final double kToggleTestHighRpm = 5000.0;
 
+    /** Point-blank hub preset RPM (POV-Right). Tune for your point-blank shot. */
+    public static final double kHubPresetRpm = 2800.0;
+
     private ShooterConstants() {}
   }
 
   /**
-   * Hood is now a motor-driven joint.
-   * Sensor is REV Through Bore duty-cycle encoder on DIO.
+   * Hood = NEO 1.1 on a Spark MAX (CAN {@link CanId#kHoodAngleNeo}). Position comes from a REV
+   * Through-Bore ABSOLUTE encoder on the Spark MAX data port, read via getAbsoluteEncoder().
    *
-   * Position units used here: "hood rotations" in the encoder's 0..1 scale.
-   * That means:
-   * - One full rotation of the encoder shaft = 1.0
-   * - Your hood will likely use only part of that range.
+   * Units: "hood rotations". The encoder is geared faster than the hood
+   * ({@link #kEncoderTurnsPerHoodTurn}), and full travel exceeds one encoder turn, so a multi-turn
+   * accumulator gives a continuous reading. Closed = 0; the open limit is measured on the real
+   * mechanism (see the distance-calibration / hood-zero procedure) and stays tunable.
+   *
+   * Mutable fields are live-tunable from Elastic — they are the calibration knobs.
    */
   public static final class HoodConstants {
     public static final int kThroughBoreDio = 6;
@@ -149,25 +154,30 @@ public final class Constants {
      */
     public static final double kEncoderToHoodRatio = 1.0;
 
-    /**
-     * Encoder zero offset in ENCODER rotations, not hood rotations.
-     */
-    public static final double kEncoderOffsetRot = 0.0;
+    /** Software zero offset in ENCODER rotations. The Hood/ZeroNow button overwrites this at
+     *  runtime by capturing the current reading at the closed stop (no hardware reset). */
+    public static double kEncoderOffsetRot = 0.0;
 
-    /** Hood fully closed (steepest angle / minimum rotation). */
+    /** Hood fully closed (steepest). Hard min for clamping. */
     public static final double kClosedHoodRot = 0.00;
     /** Hood fully open (flattest angle / maximum rotation). */
     public static final double kOpenHoodRot = 0.925;
 
     // Aliases used internally for clamping
     public static final double kMinHoodRot = kClosedHoodRot;
-    public static final double kMaxHoodRot = kOpenHoodRot;
 
-    public static final double kP = 6.0;
-    public static final double kI = 0.0;
-    public static final double kD = 0.2;
+    /** Gentle position PID — live-tunable from Elastic. */
+    public static double kP = 6.0;
+    public static double kI = 0.0;
+    public static double kD = 0.2;
 
-    public static final double kMaxOut = 0.5;
+    /** Gentleness guards (live-tunable): output magnitude cap and per-loop slew cap. */
+    public static double kMaxOut = 0.30;
+    public static double kSlewPerLoop = 0.04;
+
+    /** Point-blank hub preset hood angle (POV-Right) — min/steep angle for a point-blank shot. */
+    public static final double kHubPresetHoodRot = kClosedHoodRot;
+
     public static final double kToleranceHoodRot = 0.005;
 
     private HoodConstants() {}

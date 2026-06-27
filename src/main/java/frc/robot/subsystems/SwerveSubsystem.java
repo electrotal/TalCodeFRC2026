@@ -20,6 +20,8 @@ import frc.robot.util.FieldTargetUtil;
 import swervelib.SwerveDrive;
 import swervelib.SwerveInputStream;
 import swervelib.parser.SwerveParser;
+import swervelib.telemetry.SwerveDriveTelemetry;
+import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -32,6 +34,10 @@ public class SwerveSubsystem extends SubsystemBase {
   private RobotConfig robotConfig = null;
 
   public SwerveSubsystem() {
+    // CAN/NT: YAGSL defaults to MACHINE (highest) verbosity, which floods the bus and dashboard
+    // every loop. LOW keeps the essentials. Must be set before the SwerveDrive is created.
+    SwerveDriveTelemetry.verbosity = TelemetryVerbosity.LOW;
+
     File deployDir = new File(Filesystem.getDeployDirectory(), "swerve");
 
     File configDir = deployDir;

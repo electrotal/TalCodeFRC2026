@@ -1,15 +1,16 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.PersistMode;
-import com.revrobotics.RelativeEncoder;
-import com.revrobotics.ResetMode;
-import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
+import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -18,12 +19,18 @@ import frc.robot.util.AngleMath;
 import frc.robot.util.MultiTurnAbsoluteEncoder;
 
 /**
- * Hood subsystem.
- * Motor: NEO 1.1 on Spark Max (CAN 26).
- * Sensor: REV Through-Bore encoder on DIO 3 (absolute, 0-1 range).
- * Gear ratio 1:2 — encoder rotates twice per one hood rotation.
+ * Hood subsystem. Motor: NEO 1.1 on Spark MAX (CAN {@link Constants.CanId#kHoodAngleNeo}).
+ * Position: REV Through-Bore ABSOLUTE encoder on the Spark MAX data port (getAbsoluteEncoder()),
+ * wrapped for multi-turn continuity. Position units are "hood rotations": 0 = fully closed.
  *
- * Position scale: 0% = fully closed, 100% = fully open.
+ * <p>Control lives entirely in {@link #periodic()} (single owner of motor output): commands set
+ * intent via {@link #setHoodRot(double)} (PID to a target) or {@link #setSpeed(double)} (manual
+ * jog). PID output is clamped and slew-limited so it stays gentle on the mechanism.
+ *
+ * <p>Bring-up: drive to the closed stop with manual jog, then press Hood/ZeroNow. Re-zero after
+ * every power cycle (an absolute encoder only knows its within-one-turn position at boot, and the
+ * hood spans more than one encoder turn). Positive output must INCREASE Hood/HoodRot (= opening);
+ * if it decreases, flip kHoodInverted (motor) or kAbsEncoderInverted (encoder) until they agree.
  */
 public class HoodSubsystem extends SubsystemBase {
 
@@ -55,36 +62,55 @@ public class HoodSubsystem extends SubsystemBase {
     // motor.configure(cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     encoder = motor.getEncoder();
 
-    SmartDashboard.putNumber("Hood/EncoderOffset", encoderOffset);
+    SmartDashboard.putNumber("Hood/EncoderOffset", offset);
+    SmartDashboard.putBoolean("Hood/ZeroNow", false);
+    // Bench/Elastic angle command: type a target into Hood/TuneTargetRot, flip Hood/GoToTune on,
+    // and the hood PIDs there — tune gains and drive to any set angle without a tag in view.
+    SmartDashboard.putNumber("Hood/TuneTargetRot", targetHoodRot);
+    SmartDashboard.putBoolean("Hood/GoToTune", false);
   }
 
-  // ── Getters ──────────────────────────────────────────────────────────────────
+  // ── Position ─────────────────────────────────────────────────────────────────
 
-  /** Raw continuous encoder value (multi-turn, can exceed 1.0 or be negative). */
+  /** Continuous multi-turn encoder reading, in encoder rotations. */
   public double getRawEncoder() {
-    return encoder.getPosition();
-    }
+    return hoodEncoder.getContinuousRot();
+  }
 
-  /** Continuous encoder value with offset applied. */
   public double getOffsetEncoder() {
-    return getRawEncoder() - encoderOffset;
+    return getRawEncoder() - offset;
   }
 
-  /** Hood position in rotations (gear ratio 1:2 — encoder does 2 turns per 1 hood turn). */
+  /** Hood position in hood rotations (0 = closed). */
   public double getHoodRot() {
-    return getOffsetEncoder() / 2.0;
+    return getOffsetEncoder() / Constants.HoodConstants.kEncoderTurnsPerHoodTurn;
   }
 
-  /** Hood position as a percentage: 0 = fully closed, 100 = fully open. */
+  /** 0 = fully closed, 100 = fully open. */
   public double getHoodPercent() {
-    double range = Constants.HoodConstants.kMaxHoodRot - Constants.HoodConstants.kMinHoodRot;
+    double range = Constants.HoodConstants.kOpenHoodRot - Constants.HoodConstants.kMinHoodRot;
     if (range == 0) return 0.0;
     return ((getHoodRot() - Constants.HoodConstants.kMinHoodRot) / range) * 100.0;
   }
 
+  public double getTargetHoodRot() {
+    return targetHoodRot;
+  }
 
-  // ── Setters ──────────────────────────────────────────────────────────────────
+  /** True only once the hood has been zeroed this boot AND is within tolerance of its target. */
+  public boolean isAtAngle() {
+    return zeroed && Math.abs(getHoodRot() - targetHoodRot) <= Constants.HoodConstants.kToleranceHoodRot;
+  }
 
+  // ── Intent ───────────────────────────────────────────────────────────────────
+
+  /** PID the hood to a target (clamped to limits). Cancels any manual jog. */
+  public void setHoodRot(double rot) {
+    manualPercent = 0.0;
+    targetHoodRot = clampToLimits(rot);
+  }
+
+  /** Manual jog (LT/RT). 0 releases back to holding the current position. */
   public void setSpeed(double speed) {
     if (getHoodPercent() >= 100 && speed > 0) {
       stop();
@@ -103,7 +129,27 @@ public class HoodSubsystem extends SubsystemBase {
     AngleMath.clamp(setpoint, 0, 100);
   }
 
-  // ── Periodic ─────────────────────────────────────────────────────────────────
+  // ── Control (single owner of motor output) ─────────────────────────────────────
+
+  private double clampToLimits(double rot) {
+    return MathUtil.clamp(rot, Constants.HoodConstants.kMinHoodRot, Constants.HoodConstants.kOpenHoodRot);
+  }
+
+  /** Stop driving into a hard limit. Positive output = opening (increasing hood rotations). */
+  private double applyLimitGuard(double output) {
+    double pos = getHoodRot();
+    if (output > 0 && pos >= Constants.HoodConstants.kOpenHoodRot) return 0.0;
+    if (output < 0 && pos <= Constants.HoodConstants.kMinHoodRot) return 0.0;
+    return output;
+  }
+
+  /** Cap how fast the output can change per loop — gentle on the mechanism. */
+  private double applySlew(double output) {
+    double maxDelta = Constants.HoodConstants.kSlewPerLoop;
+    output = MathUtil.clamp(output, lastOutput - maxDelta, lastOutput + maxDelta);
+    lastOutput = output;
+    return output;
+  }
 
   @Override
   public void periodic() {

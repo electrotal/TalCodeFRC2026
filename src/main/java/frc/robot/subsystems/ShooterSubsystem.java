@@ -88,6 +88,11 @@ public class ShooterSubsystem extends SubsystemBase {
     slot0.kV = Constants.ShooterConstants.kVelocityV;
     slot0.kS = Constants.ShooterConstants.kVelocityS;
     motor.getConfigurator().apply(slot0);
+
+    // CAN: opt in only the velocity signal we read (isAtSpeed), throttle every other
+    // status signal to ~4 Hz. Closed-loop control runs on the Talon itself and is unaffected.
+    motor.getVelocity().setUpdateFrequency(50);
+    motor.optimizeBusUtilization();
   }
 
   public void setTargetRpm(ShooterMotor which, double rpm) {

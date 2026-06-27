@@ -10,13 +10,18 @@ public class DriveFaceHub extends Command {
 
   private final Command inner;
 
-  public DriveFaceHub(SwerveSubsystem swerve, DoubleSupplier xFieldMetersPerSec, DoubleSupplier yFieldMetersPerSec) {
+  public DriveFaceHub(
+      SwerveSubsystem swerve,
+      DoubleSupplier xFieldMetersPerSec,
+      DoubleSupplier yFieldMetersPerSec,
+      DoubleSupplier rotationOverrideRadPerSec) {
     inner =
         new DriveFacePoint(
             swerve,
             xFieldMetersPerSec,
             yFieldMetersPerSec,
-            FieldTargetUtil::hubCenterForAlliance
+            FieldTargetUtil::hubCenterForAlliance,
+            rotationOverrideRadPerSec
         );
 
     addRequirements(swerve);

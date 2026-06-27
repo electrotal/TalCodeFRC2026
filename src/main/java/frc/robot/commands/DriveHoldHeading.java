@@ -21,18 +21,24 @@ public class DriveHoldHeading extends Command {
   // Desired robot heading (field angle)
   private final Supplier<Rotation2d> targetHeading;
 
+  // Driver rotation override (rad/s). When non-zero the driver wins over the heading PID, so the
+  // limelight/auto-aim never fights the driver — the gyro is reliable during calibration.
+  private final DoubleSupplier rotationOverrideRadPerSec;
+
   private final PIDController headingPid;
 
   public DriveHoldHeading(
       SwerveSubsystem swerve,
       DoubleSupplier xFieldMetersPerSec,
       DoubleSupplier yFieldMetersPerSec,
-      Supplier<Rotation2d> targetHeading) {
+      Supplier<Rotation2d> targetHeading,
+      DoubleSupplier rotationOverrideRadPerSec) {
 
     this.swerve = swerve;
     this.xFieldMetersPerSec = xFieldMetersPerSec;
     this.yFieldMetersPerSec = yFieldMetersPerSec;
     this.targetHeading = targetHeading;
+    this.rotationOverrideRadPerSec = rotationOverrideRadPerSec;
 
     headingPid = new PIDController(
         Constants.SwerveConstants.kHoldHeadingP,
@@ -53,9 +59,16 @@ public class DriveHoldHeading extends Command {
   @Override
   public void execute() {
     Rotation2d currentHeading = swerve.getHeading();
-    Rotation2d target = targetHeading.get();
 
-    double omega = headingPid.calculate(currentHeading.getRadians(), target.getRadians());
+    double override = rotationOverrideRadPerSec.getAsDouble();
+    double omega;
+    if (Math.abs(override) > 1e-3) {
+      // Driver is rotating — let them win and keep the PID from winding up.
+      omega = override;
+      headingPid.reset();
+    } else {
+      omega = headingPid.calculate(currentHeading.getRadians(), targetHeading.get().getRadians());
+    }
 
     double maxOmega = Constants.SwerveConstants.kMaxAngularSpeedRadPerSec;
     if (omega > maxOmega) omega = maxOmega;
