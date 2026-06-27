@@ -10,7 +10,6 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -72,20 +71,18 @@ public class HoodSubsystem extends SubsystemBase {
 
     pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
 
-    // Gains + limits: live-tunable AND persistent across reboots (stored on the roboRIO via
-    // WPILib Preferences). initDouble seeds only the first time, so dialed-in values survive a
-    // redeploy. (Adopted from the teammate hood commit — the right call for tuning.)
-    Preferences.initDouble("Hood/kP", Constants.HoodConstants.kP);
-    Preferences.initDouble("Hood/kI", Constants.HoodConstants.kI);
-    Preferences.initDouble("Hood/kD", Constants.HoodConstants.kD);
-    Preferences.initDouble("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
-    Preferences.initDouble("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
+    // Gains + limits: live-tunable straight from Elastic (SmartDashboard) — edit them directly.
+    SmartDashboard.putNumber("Hood/kP", Constants.HoodConstants.kP);
+    SmartDashboard.putNumber("Hood/kI", Constants.HoodConstants.kI);
+    SmartDashboard.putNumber("Hood/kD", Constants.HoodConstants.kD);
+    SmartDashboard.putNumber("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
+    SmartDashboard.putNumber("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
 
     SmartDashboard.putNumber("Hood/EncoderOffset", offset);
     SmartDashboard.putBoolean("Hood/ZeroNow", false);
-    // Bench/Elastic angle command: type a target into Hood/TuneTargetRot, flip Hood/GoToTune on,
-    // and the hood PIDs there — tune gains and drive to any set angle without a tag in view.
-    SmartDashboard.putNumber("Hood/TuneTargetRot", targetHoodRot);
+    // Bench tuning: set Hood/TunePercent (0-100 % of the 0..OpenLimit range), flip Hood/GoToTune on,
+    // and the hood PIDs there. Sweep the percent to see the PID track across your working range.
+    SmartDashboard.putNumber("Hood/TunePercent", 0.0);
     SmartDashboard.putBoolean("Hood/GoToTune", false);
   }
 
@@ -127,6 +124,14 @@ public class HoodSubsystem extends SubsystemBase {
   public void setHoodRot(double rot) {
     manualPercent = 0.0;
     targetHoodRot = clampToLimits(rot);
+  }
+
+  /** PID the hood to a percent (0-100) of its working range [closed=0, OpenLimit]. */
+  public void setHoodPercentOfRange(double percent) {
+    double pct = MathUtil.clamp(percent, 0.0, 100.0) / 100.0;
+    double min = Constants.HoodConstants.kMinHoodRot;
+    double max = Constants.HoodConstants.kOpenHoodRot;
+    setHoodRot(min + pct * (max - min));
   }
 
   /** Manual jog (LT/RT). 0 releases back to holding the current position. */
@@ -172,13 +177,13 @@ public class HoodSubsystem extends SubsystemBase {
 
   @Override
   public void periodic() {
-    // Live-tunable gains + calibration knobs — persistent across reboots via Preferences.
-    Constants.HoodConstants.kP = Preferences.getDouble("Hood/kP", Constants.HoodConstants.kP);
-    Constants.HoodConstants.kI = Preferences.getDouble("Hood/kI", Constants.HoodConstants.kI);
-    Constants.HoodConstants.kD = Preferences.getDouble("Hood/kD", Constants.HoodConstants.kD);
-    Constants.HoodConstants.kMaxOut = Preferences.getDouble("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
+    // Live-tunable gains + calibration knobs straight from Elastic (SmartDashboard).
+    Constants.HoodConstants.kP = SmartDashboard.getNumber("Hood/kP", Constants.HoodConstants.kP);
+    Constants.HoodConstants.kI = SmartDashboard.getNumber("Hood/kI", Constants.HoodConstants.kI);
+    Constants.HoodConstants.kD = SmartDashboard.getNumber("Hood/kD", Constants.HoodConstants.kD);
+    Constants.HoodConstants.kMaxOut = SmartDashboard.getNumber("Hood/MaxOut", Constants.HoodConstants.kMaxOut);
     Constants.HoodConstants.kOpenHoodRot =
-        Preferences.getDouble("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
+        SmartDashboard.getNumber("Hood/OpenLimitRot", Constants.HoodConstants.kOpenHoodRot);
     pid.setPID(Constants.HoodConstants.kP, Constants.HoodConstants.kI, Constants.HoodConstants.kD);
 
     // Software-zero button (captures current reading at the closed stop, then self-resets).
@@ -187,12 +192,13 @@ public class HoodSubsystem extends SubsystemBase {
       SmartDashboard.putBoolean("Hood/ZeroNow", false);
     }
 
-    // Dashboard angle command: drive the hood to any angle typed on Elastic (calibration / tuning).
+    // Dashboard angle command as a PERCENT of the working range [0, OpenLimit].
     if (SmartDashboard.getBoolean("Hood/GoToTune", false)) {
-      setHoodRot(SmartDashboard.getNumber("Hood/TuneTargetRot", targetHoodRot));
+      setHoodPercentOfRange(SmartDashboard.getNumber("Hood/TunePercent", 0.0));
     }
 
     SmartDashboard.putNumber("Hood/HoodRot", getHoodRot());
+    SmartDashboard.putNumber("Hood/PercentOpen", getHoodPercent());
     SmartDashboard.putNumber("Hood/RawEncoder", getRawEncoder());
     SmartDashboard.putNumber("Hood/TargetRot", targetHoodRot);
     SmartDashboard.putBoolean("Hood/AtAngle", isAtAngle());
