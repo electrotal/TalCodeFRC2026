@@ -51,22 +51,15 @@ public class HoodSubsystem extends SubsystemBase {
   private double targetHoodRot = Constants.HoodConstants.kClosedHoodRot;
   private double manualPercent = 0.0;
   private double lastOutput = 0.0;
-  private boolean zeroed = false;
+  // Start usable so PID/presets work out of the box. Press Hood/ZeroNow at the closed stop for an
+  // accurate zero (recommended each boot).
+  private boolean zeroed = true;
 
   public HoodSubsystem() {
     SparkMaxConfig cfg = new SparkMaxConfig();
     cfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
     cfg.inverted(Constants.MotorInverts.kHoodInverted);
-    cfg.smartCurrentLimit(30); // protect the NEO/gearbox if the hood stalls on a hard stop
-    // CAN: hood feedback is the DIO through-bore, not the Spark MAX — no SparkMax status frame is
-    // needed for control, so slow them all.
-    cfg.signals
-        .primaryEncoderPositionPeriodMs(500)
-        .primaryEncoderVelocityPeriodMs(500)
-        .appliedOutputPeriodMs(100)
-        .busVoltagePeriodMs(500)
-        .outputCurrentPeriodMs(500)
-        .motorTemperaturePeriodMs(1000);
+    cfg.smartCurrentLimit(30); // protect the NEO/gearbox on a hard stop
     motor.configure(cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     pid.setTolerance(Constants.HoodConstants.kToleranceHoodRot);
@@ -207,24 +200,26 @@ public class HoodSubsystem extends SubsystemBase {
     SmartDashboard.putBoolean("Hood/Zeroed", zeroed);
 
     double maxOut = Constants.HoodConstants.kMaxOut;
+    double jogPower = SmartDashboard.getNumber("Hood/JogPercent", 0.1);
+    if (jogPower <= 0.0) jogPower = 0.1; // never let a stray 0 on the dashboard kill the jog
     double output;
     if (manualPercent != 0.0) {
-      // Manual jog (LT/RT): open-loop, NOT limit-guarded, so you can always reach the stops (e.g.
-      // to find closed and zero). Strength = Hood/JogPercent, separate from the PID's MaxOut.
-      double jogCap = SmartDashboard.getNumber("Hood/JogPercent", 0.2);
-      output = MathUtil.clamp(manualPercent, -jogCap, jogCap);
-      targetHoodRot = clampToLimits(getHoodRot()); // hold here when released
+      // Manual jog (LT/RT): open-loop, IMMEDIATE, fixed strength — like the original working hood.
+      // No slew, no limit guard, so you can always reach the stops (e.g. to zero). RT = open (+).
+      output = manualPercent > 0 ? jogPower : -jogPower;
+      targetHoodRot = clampToLimits(getHoodRot()); // hold here on release
+      lastOutput = output;                          // keep slew state sane for the PID handoff
     } else if (zeroed) {
       output = MathUtil.clamp(pid.calculate(getHoodRot(), targetHoodRot), -maxOut, maxOut);
-      output = applyLimitGuard(output); // guard the PID only
+      output = applyLimitGuard(output);
+      output = applySlew(output); // smooth the PID path only
     } else {
-      output = 0.0; // not zeroed: only manual jog allowed (drive to closed, then Hood/ZeroNow)
+      output = 0.0;
     }
 
-    output = applySlew(output);
-    SmartDashboard.putNumber("Hood/CmdOutput", output);          // what we send the Spark MAX (debug)
-    SmartDashboard.putNumber("Hood/ManualPercent", manualPercent); // -1 LT / 0 / +1 RT (debug)
+    SmartDashboard.putNumber("Hood/CmdOutput", output);
+    SmartDashboard.putNumber("Hood/ManualPercent", manualPercent);
     motor.set(output);
-    SmartDashboard.putNumber("Hood/MotorApplied", motor.getAppliedOutput()); // what the Spark MAX actually applies
+    SmartDashboard.putNumber("Hood/MotorApplied", motor.getAppliedOutput());
   }
 }

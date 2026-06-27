@@ -129,8 +129,8 @@ public final class Constants {
     public static final double kToggleTestLowRpm = 2500.0;
     public static final double kToggleTestHighRpm = 5000.0;
 
-    /** Point-blank hub preset RPM (POV-Right). Tune for your point-blank shot. */
-    public static final double kHubPresetRpm = 2800.0;
+    /** Point-blank hub preset RPM (POV-Right). Live-tunable on the dashboard via Hub/PresetRpm. */
+    public static double kHubPresetRpm = 2800.0;
 
     private ShooterConstants() {}
   }
@@ -151,8 +151,10 @@ public final class Constants {
     /** REV Through-Bore absolute encoder on a RoboRIO DIO channel (duty-cycle). */
     public static final int kThroughBoreDio = 6;
 
-    /** Encoder shaft turns per one hood rotation (encoder geared ~2x the hood). */
-    public static final double kEncoderTurnsPerHoodTurn = 2.0;
+    /** Encoder turns per hood "rotation" unit. 1.0 = Hood/HoodRot is exactly the raw DIO encoder
+     *  reading (your usable range is 0.00..0.07). Keep at 1.0 so the dashboard number, the limits,
+     *  and the shot-map hood values are all in the SAME 0..0.07 scale. */
+    public static final double kEncoderTurnsPerHoodTurn = 1.0;
 
     /** Invert the absolute encoder if its reading counts down as the hood opens. */
     public static final boolean kAbsEncoderInverted = false;
@@ -176,8 +178,9 @@ public final class Constants {
     public static double kMaxOut = 0.30;
     public static double kSlewPerLoop = 0.04;
 
-    /** Point-blank hub preset hood angle (POV-Right) — min/steep angle for a point-blank shot. */
-    public static final double kHubPresetHoodRot = kClosedHoodRot;
+    /** Point-blank hub preset hood (POV-Right), in our 0..0.07 scale. ~0.0166 matches the close
+     *  shot-map point. Live-tunable on the dashboard via Hub/PresetHoodRot. */
+    public static double kHubPresetHoodRot = 0.0166;
 
     public static final double kToleranceHoodRot = 0.005;
 
@@ -218,18 +221,15 @@ public final class Constants {
    */
   public static final class ShotLookup {
     // Distances must be in ascending order for interpolation to work correctly
-    public static final double[] kDistanceM = {
-        Units.inchesToMeters(52.0),   // ~1.32 m
-        Units.inchesToMeters(114.4),  // ~2.91 m
-        3.80,                         //  3.80 m
-        Units.inchesToMeters(165.5)   // ~4.20 m
-    };
+    // From WCP 2026 Competitive Concept shot map; hood normalized from WCP's [0.01,0.77] servo span
+    // into our [0.00,0.07] encoder span. Distance = robot -> hub CENTER (meters). Below 1.32 m the
+    // lookup clamps to row 0. Hood opens MORE with distance. Live-tunable via ShotCal/* on the dash.
+    public static final double[] kDistanceM = {1.32, 2.91, 4.20};
+    public static final double[] kHoodRot   = {0.0166, 0.0359, 0.0433};
 
-    public static final double[] kHoodRot = {0.56, 0.42, 0.39, 0.37};
-
-    public static final double[] kTopRpm    = {2800.0, 3275.0, 3900.0, 3650.0};
-    public static final double[] kMidRpm    = {2800.0, 3275.0, 3900.0, 3650.0};
-    public static final double[] kBottomRpm = {2800.0, 3275.0, 3900.0, 3650.0};
+    public static final double[] kTopRpm    = {2800.0, 3275.0, 3650.0};
+    public static final double[] kMidRpm    = {2800.0, 3275.0, 3650.0};
+    public static final double[] kBottomRpm = {2800.0, 3275.0, 3650.0};
 
     private ShotLookup() {}
   }
@@ -251,7 +251,9 @@ public final class Constants {
     private AutoAimConstants() {}
   }
 
-  public static final double maxSpeed = Units.feetToMeters(14.5);
+  // Robot max speed. Reduced 10% for better control. PREVIOUS VALUE: 14.5 ft/s — change back to
+  // Units.feetToMeters(14.5) to restore full speed.
+  public static final double maxSpeed = Units.feetToMeters(13.05);
 
   private Constants() {}
 }

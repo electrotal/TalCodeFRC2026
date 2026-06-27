@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import com.ctre.phoenix6.configs.ClosedLoopRampsConfigs;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -76,10 +77,15 @@ public class ShooterSubsystem extends SubsystemBase {
 
     CurrentLimitsConfigs cl = new CurrentLimitsConfigs();
     cl.SupplyCurrentLimitEnable = true;
-    cl.SupplyCurrentLimit = 80;
+    cl.SupplyCurrentLimit = 50; // was 80 — reduce 3-Kraken inrush to avoid brownout/e-stop
     cl.StatorCurrentLimitEnable = true;
     cl.StatorCurrentLimit = 120;
     motor.getConfigurator().apply(cl);
+
+    // Gentle spin-up so all three shooter Krakens don't step current at once (brownout protection).
+    ClosedLoopRampsConfigs ramps = new ClosedLoopRampsConfigs();
+    ramps.VoltageClosedLoopRampPeriod = 0.15;
+    motor.getConfigurator().apply(ramps);
 
     Slot0Configs slot0 = new Slot0Configs();
     slot0.kP = Constants.ShooterConstants.kVelocityP;

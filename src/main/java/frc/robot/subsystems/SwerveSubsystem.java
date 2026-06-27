@@ -34,9 +34,10 @@ public class SwerveSubsystem extends SubsystemBase {
   private RobotConfig robotConfig = null;
 
   public SwerveSubsystem() {
-    // CAN/NT: YAGSL defaults to MACHINE (highest) verbosity, which floods the bus and dashboard
-    // every loop. LOW keeps the essentials. Must be set before the SwerveDrive is created.
-    SwerveDriveTelemetry.verbosity = TelemetryVerbosity.LOW;
+    // CAN/NT: YAGSL defaults to MACHINE (highest), which floods the bus/dashboard. POSE is the
+    // lowest level that still publishes the odometry/Field2d widget (LOW hid it). Must be set
+    // before the SwerveDrive is created.
+    SwerveDriveTelemetry.verbosity = TelemetryVerbosity.POSE;
 
     File deployDir = new File(Filesystem.getDeployDirectory(), "swerve");
 

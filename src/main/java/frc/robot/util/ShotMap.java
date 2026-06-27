@@ -4,25 +4,16 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 
 /**
- * Linear-interpolation shot lookup (like WCP CC 2026).
- * Three calibration points: distance → RPM + hood rotation.
- * All calibration values are live-tunable from SmartDashboard/Elastic under "ShotCal/".
+ * Linear-interpolation shot lookup. Distance (m, robot -> hub center) -> hood rotation + RPM.
+ * Calibration points come from Constants.ShotLookup and are live-tunable from Elastic under
+ * "ShotCal/" (DistN_M, HoodN, RPMN). Works with any number of points (3+).
  */
 public final class ShotMap {
 
   public static final class ShotSolution {
-    private final double distanceMeters;
-    private final double hoodRot;
-    private final double topRpm;
-    private final double midRpm;
-    private final double bottomRpm;
+    private final double distanceMeters, hoodRot, topRpm, midRpm, bottomRpm;
 
-    public ShotSolution(
-        double distanceMeters,
-        double hoodRot,
-        double topRpm,
-        double midRpm,
-        double bottomRpm) {
+    public ShotSolution(double distanceMeters, double hoodRot, double topRpm, double midRpm, double bottomRpm) {
       this.distanceMeters = distanceMeters;
       this.hoodRot = hoodRot;
       this.topRpm = topRpm;
@@ -44,52 +35,31 @@ public final class ShotMap {
   private static void initTunables() {
     if (initialized) return;
     initialized = true;
-
-    SmartDashboard.putNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]);
-    SmartDashboard.putNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]);
-    SmartDashboard.putNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]);
-    SmartDashboard.putNumber("ShotCal/Dist4_M", Constants.ShotLookup.kDistanceM[3]);
-
-    SmartDashboard.putNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]);
-    SmartDashboard.putNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]);
-    SmartDashboard.putNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]);
-    SmartDashboard.putNumber("ShotCal/RPM4", Constants.ShotLookup.kTopRpm[3]);
-
-    SmartDashboard.putNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]);
-    SmartDashboard.putNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]);
-    SmartDashboard.putNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]);
-    SmartDashboard.putNumber("ShotCal/Hood4", Constants.ShotLookup.kHoodRot[3]);
+    for (int i = 0; i < Constants.ShotLookup.kDistanceM.length; i++) {
+      int n = i + 1;
+      SmartDashboard.putNumber("ShotCal/Dist" + n + "_M", Constants.ShotLookup.kDistanceM[i]);
+      SmartDashboard.putNumber("ShotCal/RPM" + n, Constants.ShotLookup.kTopRpm[i]);
+      SmartDashboard.putNumber("ShotCal/Hood" + n, Constants.ShotLookup.kHoodRot[i]);
+    }
   }
 
-  /**
-   * Linear-interpolation lookup from live-tunable calibration points.
-   * Continuously callable — reads current distance, returns interpolated RPM + hood.
-   */
+  /** Interpolated shot for a distance (m). Reads live ShotCal/* values, defaulting to constants. */
   public static ShotSolution calculate(double distanceMeters) {
     initTunables();
 
-    double[] dists = {
-        SmartDashboard.getNumber("ShotCal/Dist1_M", Constants.ShotLookup.kDistanceM[0]),
-        SmartDashboard.getNumber("ShotCal/Dist2_M", Constants.ShotLookup.kDistanceM[1]),
-        SmartDashboard.getNumber("ShotCal/Dist3_M", Constants.ShotLookup.kDistanceM[2]),
-        SmartDashboard.getNumber("ShotCal/Dist4_M", Constants.ShotLookup.kDistanceM[3]),
-    };
-    double[] rpms = {
-        SmartDashboard.getNumber("ShotCal/RPM1", Constants.ShotLookup.kTopRpm[0]),
-        SmartDashboard.getNumber("ShotCal/RPM2", Constants.ShotLookup.kTopRpm[1]),
-        SmartDashboard.getNumber("ShotCal/RPM3", Constants.ShotLookup.kTopRpm[2]),
-        SmartDashboard.getNumber("ShotCal/RPM4", Constants.ShotLookup.kTopRpm[3]),
-    };
-    double[] hoods = {
-        SmartDashboard.getNumber("ShotCal/Hood1", Constants.ShotLookup.kHoodRot[0]),
-        SmartDashboard.getNumber("ShotCal/Hood2", Constants.ShotLookup.kHoodRot[1]),
-        SmartDashboard.getNumber("ShotCal/Hood3", Constants.ShotLookup.kHoodRot[2]),
-        SmartDashboard.getNumber("ShotCal/Hood4", Constants.ShotLookup.kHoodRot[3]),
-    };
+    int len = Constants.ShotLookup.kDistanceM.length;
+    double[] dists = new double[len];
+    double[] rpms = new double[len];
+    double[] hoods = new double[len];
+    for (int i = 0; i < len; i++) {
+      int n = i + 1;
+      dists[i] = SmartDashboard.getNumber("ShotCal/Dist" + n + "_M", Constants.ShotLookup.kDistanceM[i]);
+      rpms[i] = SmartDashboard.getNumber("ShotCal/RPM" + n, Constants.ShotLookup.kTopRpm[i]);
+      hoods[i] = SmartDashboard.getNumber("ShotCal/Hood" + n, Constants.ShotLookup.kHoodRot[i]);
+    }
 
     double rpm = LinearInterpolation.lookup(dists, rpms, distanceMeters);
     double hoodRot = LinearInterpolation.lookup(dists, hoods, distanceMeters);
-
     return new ShotSolution(distanceMeters, hoodRot, rpm, rpm, rpm);
   }
 }
