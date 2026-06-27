@@ -44,6 +44,14 @@ public final class AutoNamedCommands {
     // Prepare a fixed point-blank hub shot (static angle + RPM)
     NamedCommands.registerCommand("PrepareAtHub", PrepareToShootAtHub.create(shooter, hood));
 
+    // One-shot point-blank: hold the hub preset (hood + RPM), wait until at speed, then feed.
+    // Drop this on a path right next to the hub and it shoots — no aiming, no distance needed.
+    NamedCommands.registerCommand(
+        "ShootAtHub",
+        PrepareToShootAtHub.create(shooter, hood).raceWith(
+            new WaitForShooterReady(shooter).withTimeout(2.0)
+                .andThen(new FeedShooterWithIntakeJerk(transport, intake).withTimeout(1.5))));
+
     // Full shoot: spin up, wait until at speed, then feed
     NamedCommands.registerCommand(
         "Shoot",
