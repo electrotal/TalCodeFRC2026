@@ -132,7 +132,8 @@ public final class Constants {
 
   /**
    * Hood = NEO 1.1 on a Spark MAX (CAN {@link CanId#kHoodAngleNeo}). Position comes from a REV
-   * Through-Bore ABSOLUTE encoder on the Spark MAX data port, read via getAbsoluteEncoder().
+   * Through-Bore absolute encoder on RoboRIO DIO {@link #kThroughBoreDio} (duty-cycle), read via
+   * {@link frc.robot.util.MultiTurnAbsoluteEncoder} — the same proven path the intake uses.
    *
    * Units: "hood rotations". The encoder is geared faster than the hood
    * ({@link #kEncoderTurnsPerHoodTurn}), and full travel exceeds one encoder turn, so a multi-turn
@@ -142,6 +143,9 @@ public final class Constants {
    * Mutable fields are live-tunable from Elastic — they are the calibration knobs.
    */
   public static final class HoodConstants {
+    /** REV Through-Bore absolute encoder on a RoboRIO DIO channel (duty-cycle). */
+    public static final int kThroughBoreDio = 6;
+
     /** Encoder shaft turns per one hood rotation (encoder geared ~2x the hood). */
     public static final double kEncoderTurnsPerHoodTurn = 2.0;
 

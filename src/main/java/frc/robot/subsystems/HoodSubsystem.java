@@ -1,6 +1,5 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel;
@@ -10,6 +9,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj.Preferences;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -18,8 +18,8 @@ import frc.robot.util.MultiTurnAbsoluteEncoder;
 
 /**
  * Hood subsystem. Motor: NEO 1.1 on Spark MAX (CAN {@link Constants.CanId#kHoodAngleNeo}).
- * Position: REV Through-Bore ABSOLUTE encoder on the Spark MAX data port (getAbsoluteEncoder()),
- * wrapped for multi-turn continuity. Position units are "hood rotations": 0 = fully closed.
+ * Position: REV Through-Bore absolute encoder on RoboRIO DIO {@link Constants.HoodConstants#kThroughBoreDio}
+ * (duty-cycle), wrapped for multi-turn continuity. Position units are "hood rotations": 0 = fully closed.
  *
  * <p>Control lives entirely in {@link #periodic()} (single owner of motor output): commands set
  * intent via {@link #setHoodRot(double)} (PID to a target) or {@link #setSpeed(double)} (manual
@@ -34,9 +34,13 @@ public class HoodSubsystem extends SubsystemBase {
 
   private final SparkMax motor =
       new SparkMax(Constants.CanId.kHoodAngleNeo, SparkLowLevel.MotorType.kBrushless);
-  private final SparkAbsoluteEncoder absEncoder = motor.getAbsoluteEncoder();
+  // REV Through-Bore on RoboRIO DIO (duty-cycle absolute), wrapped for multi-turn continuity.
+  private final DutyCycleEncoder throughBore =
+      new DutyCycleEncoder(Constants.HoodConstants.kThroughBoreDio);
   private final MultiTurnAbsoluteEncoder hoodEncoder =
-      new MultiTurnAbsoluteEncoder(absEncoder::getPosition, () -> true);
+      new MultiTurnAbsoluteEncoder(
+          () -> Constants.HoodConstants.kAbsEncoderInverted ? 1.0 - throughBore.get() : throughBore.get(),
+          throughBore::isConnected);
 
   private final PIDController pid =
       new PIDController(
@@ -55,13 +59,12 @@ public class HoodSubsystem extends SubsystemBase {
     cfg.idleMode(SparkBaseConfig.IdleMode.kBrake);
     cfg.inverted(Constants.MotorInverts.kHoodInverted);
     cfg.smartCurrentLimit(30); // protect the NEO/gearbox if the hood stalls on a hard stop
-    cfg.absoluteEncoder.inverted(Constants.HoodConstants.kAbsEncoderInverted);
-    // CAN: the absolute-encoder position is our feedback — keep it fast; slow everything else.
+    // CAN: hood feedback is the DIO through-bore, not the Spark MAX — no SparkMax status frame is
+    // needed for control, so slow them all.
     cfg.signals
-        .absoluteEncoderPositionPeriodMs(20)
         .primaryEncoderPositionPeriodMs(500)
         .primaryEncoderVelocityPeriodMs(500)
-        .appliedOutputPeriodMs(50)
+        .appliedOutputPeriodMs(100)
         .busVoltagePeriodMs(500)
         .outputCurrentPeriodMs(500)
         .motorTemperaturePeriodMs(1000);
