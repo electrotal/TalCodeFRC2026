@@ -15,7 +15,7 @@ import frc.robot.commands.AutoNamedCommands;
 import frc.robot.commands.Autos;
 import frc.robot.commands.DriveFaceHub;
 import frc.robot.commands.DriveFaceVirtualGoal;
-import frc.robot.commands.FeedShooterWithIntakeJerk;
+import frc.robot.commands.IntakeJerk;
 import frc.robot.commands.PrepareToShootAtHub;
 import frc.robot.commands.ResetGyro;
 import frc.robot.commands.RunTransportWhileHeld;
@@ -177,8 +177,8 @@ public class RobotContainer {
     // HoodConstants.kHubPresetHoodRot, ShooterConstants.kHubPresetRpm.)
     driver.povRight().toggleOnTrue(PrepareToShootAtHub.create(shooter, hood));
 
-    // POV-Left: jerk the intake forward/back to settle balls inside (values in FeedConstants).
-    driver.povLeft().whileTrue(new FeedShooterWithIntakeJerk(transport, intake));
+    // POV-Left: wiggle the intake PIVOT (clopen <-> half-clopen) to shake balls in. Wheels stay off.
+    driver.povLeft().whileTrue(new IntakeJerk(intake));
 
     // Ready indicator: rumble while BOTH shooter RPM and hood angle are on target. The green light
     // is the Robot/ReadyToShoot boolean published by DriverDisplaySubsystem.

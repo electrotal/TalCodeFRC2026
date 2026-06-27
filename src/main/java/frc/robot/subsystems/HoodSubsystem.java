@@ -225,5 +225,6 @@ public class HoodSubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Hood/CmdOutput", output);          // what we send the Spark MAX (debug)
     SmartDashboard.putNumber("Hood/ManualPercent", manualPercent); // -1 LT / 0 / +1 RT (debug)
     motor.set(output);
+    SmartDashboard.putNumber("Hood/MotorApplied", motor.getAppliedOutput()); // what the Spark MAX actually applies
   }
 }

@@ -88,6 +88,11 @@ public final class Constants {
     public static final double kOpenPivotRot = 0.36;
     public static final double kClopenPivotRot = 0.55;
 
+    /** Intake jerk: the pivot oscillates between clopen and this "half-clopen" position (wheels
+     *  stay off) to settle balls. Tune the position and dwell to taste. */
+    public static final double kJerkHalfClopenRot = 0.45;
+    public static final double kJerkDwellSeconds = 0.2;
+
     public static final double kPivotP = 1.2;
     public static final double kPivotI = 0.0;
     public static final double kPivotD = 0.03;
@@ -159,8 +164,8 @@ public final class Constants {
     /** Hood fully closed (steepest). Hard min for clamping. */
     public static final double kClosedHoodRot = 0.00;
     public static final double kMinHoodRot = kClosedHoodRot;
-    /** Hood fully open (flattest). Measure on the real mechanism, then tune live. */
-    public static double kOpenHoodRot = 0.71;
+    /** Hood fully open (flattest), in hood rotations from closed. Measured: ~0.07. Tune live. */
+    public static double kOpenHoodRot = 0.07;
 
     /** Gentle position PID — live-tunable from Elastic. */
     public static double kP = 6.0;
