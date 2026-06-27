@@ -6,7 +6,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 /**
- * Periodically injects Limelight pose measurements into the swerve pose estimator.
+ * Periodically injects Limelight pose measurements into the swerve pose estimator — X/Y ONLY.
+ * The robot heading always comes from the gyro (trusted ~99.9%); the single-camera limelight yaw
+ * is never allowed to set the robot angle. Vision only corrects translation.
  */
 public class VisionFusionSubsystem extends SubsystemBase {
 
@@ -69,7 +71,9 @@ public class VisionFusionSubsystem extends SubsystemBase {
     // going forward. Without this, the robot starts at (0,0) and every real tag reading
     // gets rejected because it looks like a giant jump.
     if (!odometrySeeded) {
-      swerve.resetPose(meas.pose);
+      // Seed POSITION from vision but keep the gyro heading — the limelight must never set the
+      // robot's angle (one camera is unreliable; the gyro is trusted).
+      swerve.resetPose(new Pose2d(meas.pose.getTranslation(), swerve.getHeading()));
       odometrySeeded = true;
       SmartDashboard.putString("Vision/Fusion/RejectReason", "SEEDED");
       SmartDashboard.putBoolean("Vision/Fusion/Seeded", true);
@@ -85,7 +89,10 @@ public class VisionFusionSubsystem extends SubsystemBase {
       return;
     }
 
-    swerve.addVisionMeasurement(meas.pose, meas.timestampSeconds);
+    // Correct X/Y only: feed the vision translation with the CURRENT gyro heading so the
+    // estimator's rotation residual is ~0 and the limelight can never drag the heading.
+    swerve.addVisionMeasurement(
+        new Pose2d(meas.pose.getTranslation(), swerve.getHeading()), meas.timestampSeconds);
     SmartDashboard.putString("Vision/Fusion/RejectReason", "ACCEPTED");
   }
 }
