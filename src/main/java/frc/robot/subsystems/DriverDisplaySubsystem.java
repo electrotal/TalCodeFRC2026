@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -21,6 +22,11 @@ public class DriverDisplaySubsystem extends SubsystemBase {
 
   private boolean readyToShoot = false;
 
+  // Our own odometry field widget, published every loop from the swerve pose. Independent of YAGSL
+  // telemetry verbosity, so the dashboard odometry can't silently disappear again. Bind an Elastic
+  // "Field" widget to SmartDashboard/Drive/Field.
+  private final Field2d field = new Field2d();
+
   public DriverDisplaySubsystem(
       SwerveSubsystem swerve,
       ShooterSubsystem shooter,
@@ -30,6 +36,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
     this.shooter = shooter;
     this.hood = hood;
     this.vision = vision;
+    SmartDashboard.putData("Drive/Field", field);
   }
 
   /** True only when the shooter is stably at RPM AND the hood is at angle — drives rumble + green
@@ -48,6 +55,7 @@ public class DriverDisplaySubsystem extends SubsystemBase {
     SmartDashboard.putNumber("Drive/PoseY", swerve.getPose().getY());
     SmartDashboard.putNumber("Drive/HeadingDeg", swerve.getHeading().getDegrees());
     SmartDashboard.putNumber("Drive/DistToHubM", FieldTargetUtil.distanceToHubMeters(swerve.getPose()));
+    field.setRobotPose(swerve.getPose());
 
     SmartDashboard.putBoolean("Vision/HasTarget", vision.hasTarget());
     SmartDashboard.putNumber("Vision/TagCount",
