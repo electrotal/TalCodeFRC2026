@@ -189,9 +189,11 @@ public class RobotContainer {
     // POV-Left: jerk the intake forward/back to settle balls inside (values in FeedConstants).
     driver.povLeft().whileTrue(new FeedShooterWithIntakeJerk(transport, intake));
 
-    // Ready indicator: rumble while BOTH shooter RPM and hood angle are on target. The green light
-    // is the Robot/ReadyToShoot boolean published by DriverDisplaySubsystem.
-    new Trigger(display::isReadyToShoot).whileTrue(
+    // Ready indicator: rumble while BOTH shooter RPM and hood angle are on target. (Previously gated
+    // on DriverDisplaySubsystem.isReadyToShoot(), which is currently disabled — compute it inline.)
+    new Trigger(() ->
+            shooter.isAtSpeedForTime(Constants.ShooterConstants.kReadyTimeSeconds) && hood.isAtAngle())
+        .whileTrue(
         Commands.startEnd(
             () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.4),
             () -> driver.getHID().setRumble(RumbleType.kBothRumble, 0.0)));
